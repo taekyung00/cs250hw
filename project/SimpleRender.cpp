@@ -52,6 +52,8 @@ void SimpleRender::DisplayFaces(Mesh& m, const Affine& A, const Vector& color)
 	int vertexCount = m.VertexCount();
 	std::vector<Point> vertices;
 	vertices.reserve(vertexCount);
+	//!NOTE: we have to seperate model xform and proj xform
+	//! because we use CenterOfProjection and line_shines, and these are in "World Space"!!
 	Matrix M = PersProj * A;
 	for (int i = 0; i < vertexCount; i++)
 	{
@@ -64,17 +66,18 @@ void SimpleRender::DisplayFaces(Mesh& m, const Affine& A, const Vector& color)
 		vertices.push_back(Point(result.x, result.y, result.z));
 	}
 	int faceCount = m.FaceCount();
-	const Vector line_sines { 0, 0, 1 };
+	const Vector line_shines { 0, 0, 1 };
 	for (int i = 0; i < faceCount; i++)
 	{
 		int index1 = m.GetFace(i).index1;
 		int index2 = m.GetFace(i).index2;
 		int index3 = m.GetFace(i).index3;
-		Vector normal = cross(m.GetVertex(index2) - m.GetVertex(index1), m.GetVertex(index3) - m.GetVertex(index1));
-		Vector PE = PointToVector(CenterOfProjection) - PointToVector(m.GetVertex(index1));
+		const Point world_vertices[3] = { A * m.GetVertex(index1), A * m.GetVertex(index2), A * m.GetVertex(index3) };
+		Vector normal = cross(world_vertices[1] - world_vertices[0], world_vertices[2] - world_vertices[0]);
+		Vector PE = PointToVector(CenterOfProjection) - PointToVector(world_vertices[0]);
 		if (is_frontface(normal,PE))
 		{
-			float diffuse = dot(line_sines, normal) / abs(normal);
+			float diffuse = dot(line_shines, normal) / abs(normal);
 			diffuse = diffuse < 0 ? -diffuse : diffuse;
 			render.SetColor(Vector{ diffuse * color.x, diffuse * color.y, diffuse * color.z });
 			render.FillTriangle(vertices[index1], vertices[index2], vertices[index3]);
