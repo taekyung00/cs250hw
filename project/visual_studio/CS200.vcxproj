@@ -92,7 +92,9 @@
   <ItemGroup>
     <ClCompile Include="..\Affine.cpp" />
     <ClCompile Include="..\Camera.cpp" />
+    <ClCompile Include="..\CameraFrustumTest.cpp" />
     <ClCompile Include="..\CubeMesh.cpp" />
+    <ClCompile Include="..\FrustumMesh.cpp" />
     <ClCompile Include="..\Render.cpp" />
     <ClCompile Include="..\SimpleRender.cpp" />
     <ClCompile Include="..\SimpleRenderTest.cpp" />
@@ -102,6 +104,7 @@
     <ClInclude Include="..\Affine.h" />
     <ClInclude Include="..\Camera.h" />
     <ClInclude Include="..\CubeMesh.h" />
+    <ClInclude Include="..\FrustumMesh.h" />
     <ClInclude Include="..\Mesh.h" />
     <ClInclude Include="..\Render.h" />
     <ClInclude Include="..\SimpleRender.h" />
