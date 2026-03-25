@@ -8,7 +8,7 @@ namespace {
 
 const FrustumMesh::Face FrustumMesh::faces[12] =
 {
-	{2,3,1}, {3,4,1}, //near
+	{3,2,4}, {2,1,4}, //near
 	{7,3,4}, {7,4,8}, //top
 	{7,3,2}, {2,6,7}, //right
 	{7,6,2}, {7,2,3}, //left
@@ -18,28 +18,41 @@ const FrustumMesh::Face FrustumMesh::faces[12] =
 const FrustumMesh::Edge FrustumMesh::edges[16] =
 {
 	{0,1}, {0,2}, {0,3}, {0,4},
-	{1,2}, {2,3}, {3,4}, {4,1}, //near
-	{5,6}, {6,7}, {7,8}, {8,5}, //far
-	{8,4}, {1,5}, {3,7}, {6,2}  //verticals
+	//near
+	{1,2}, // BR to BL
+	{2,3}, // BL to TL
+	{3,4}, // TL to TR
+	{4,1}, // TR to BR
+	//far
+	{5,6}, // BR to BL
+	{6,7}, // BL to TL
+	{7,8}, // TL to TR
+	{8,5}, // TR to BR
+	{1,5}, // Near BR to Far BR
+	{2,6}, // Near BL to Far BL
+	{3,7}, // Near TL to Far TL
+	{4,8}  // Near TR to Far TR
 };
 
 
 FrustumMesh::FrustumMesh(float fov, float a, float n, float f)
 {
-}
+	vertices[0] = CenterOfProjection;
+	float fov_tan_value = tan(fov * 0.5f);
+	float near_width_half =  n * fov_tan_value;
+	float near_height_half = near_width_half / a;
+	float far_width_half = f * fov_tan_value;
+	float far_height_half = far_width_half / a;
+	
+	vertices[1] = Point(near_width_half, -near_height_half, -n);
+	vertices[2] = Point(-near_width_half, -near_height_half, -n);
+	vertices[3] = Point(-near_width_half, near_height_half, -n);
+	vertices[4] = Point(near_width_half, near_height_half, -n);
+	vertices[5] = Point(far_width_half, -far_height_half, -f);
+	vertices[6] = Point(-far_width_half, -far_height_half, -f);
+	vertices[7] = Point(-far_width_half, far_height_half, -f);
+	vertices[8] = Point(far_width_half, far_height_half, -f);
 
-int FrustumMesh::VertexCount(void)
-{
-	return 9;
-}
-
-Point FrustumMesh::GetVertex(int i)
-{
-	return vertices[i];
-}
-
-Vector FrustumMesh::Dimensions(void)
-{
 	float max_x = vertices[0].x;
 	float min_x = vertices[0].x;
 	float max_y = vertices[0].y;
@@ -55,14 +68,8 @@ Vector FrustumMesh::Dimensions(void)
 		if (max_z < v.z) max_z = v.z;
 		if (min_z > v.z) min_z = v.z;
 	}
-	float delta_x = max_x - min_x;
-	float delta_y = max_y - min_y;
-	float delta_z = max_z - min_z;
-	return Vector(delta_x, delta_y, delta_z);
-}
+	dimensions = Vector(max_x - min_x, max_y - min_y, max_z - min_z);
 
-Point FrustumMesh::Center(void)
-{
 	float sum_x = 0.0f;
 	float sum_y = 0.0f;
 	float sum_z = 0.0f;
@@ -72,7 +79,29 @@ Point FrustumMesh::Center(void)
 		sum_y += v.y;
 		sum_z += v.z;
 	}
-	return Point(sum_x / VertexCount(), sum_y / VertexCount(), sum_z / VertexCount());
+	center = Point(sum_x / VertexCount(), sum_y / VertexCount(), sum_z / VertexCount());
+}
+
+int FrustumMesh::VertexCount(void)
+{
+	return 9;
+}
+
+Point FrustumMesh::GetVertex(int i)
+{
+	return vertices[i];
+}
+
+Vector FrustumMesh::Dimensions(void)
+{
+	
+	return dimensions;
+}
+
+Point FrustumMesh::Center(void)
+{
+	
+	return center;
 }
 
 int FrustumMesh::FaceCount(void)

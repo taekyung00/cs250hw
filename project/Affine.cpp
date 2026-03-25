@@ -86,12 +86,19 @@ float abs(const Vector& v)
 Vector normalize(const Vector& v)
 {
 	const float r = abs(v);
-	return Vector(v.x/r, v.y/r, v.z/r);
+	if (Hcoord::near(r, 0))
+	{
+		return Vector(0.0f, 0.0f, 0.0f);
+	}
+	else
+	{
+		return Vector(v.x / r, v.y / r, v.z / r);
+	}
 }
 
 Vector cross(const Vector& u, const Vector& v)
 {
-	return Vector(u.y * v.z - u.z * v.x, u.z * v.x - u.x * v.z, u.x * v.y - u.y * v.x);
+	return Vector(u.y * v.z - u.z * v.y, u.z * v.x - u.x * v.z, u.x * v.y - u.y * v.x);
 }
 
 Affine rotate(float t, const Vector& v)
@@ -194,10 +201,10 @@ Affine inverse(const Affine& A)
 
 Point VectorToPoint(const Vector& v)
 {
-	return Point(v.x,v.y,v.z);
+	return Point(v.x, v.y, v.z);
 }
 
 Vector PointToVector(const Point& p)
 {
-	return Vector(p.x,p.y,p.z);
+	return Vector(p.x, p.y, p.z);
 }

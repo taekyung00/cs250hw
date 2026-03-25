@@ -97,7 +97,6 @@
     <ClCompile Include="..\FrustumMesh.cpp" />
     <ClCompile Include="..\Render.cpp" />
     <ClCompile Include="..\SimpleRender.cpp" />
-    <ClCompile Include="..\SimpleRenderTest.cpp" />
     <ClCompile Include="..\SnubDodecMesh.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -15,12 +15,14 @@ Camera::Camera(void) :
 
 }
 
-Camera::Camera(const Point& E, const Vector& look, const Vector& vp, float fov, float aspect, float near, float far)
-	: eye(E), near(near), far(far), 
-	back(-normalize(look)), right(normalize(cross(look, vp))), up(cross(back, right)),
+Camera::Camera(const Point& E, const Vector& look, const Vector& vp, float fov, float aspect, float near_, float far_)
+	: eye(E), near(near_), far(far_),
+	right(normalize(cross(look, vp))),
+	back(-normalize(look)),
 	distance(near), width(tan(fov / 2) * 2 * distance), height(width / aspect)
 
 {
+	up = cross(back, right);
 }
 
 Point Camera::Eye(void) const
