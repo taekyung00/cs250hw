@@ -5,7 +5,7 @@ namespace
 	{
 		return dot(v1,v2) > 0;
 	}
-	const Point CenterOfProjection(0, 0, 55);
+	const Point CenterOfProjection(0, 0, 5);
 }
 
 SimpleRender::SimpleRender(Render& r) : render(r)

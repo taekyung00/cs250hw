@@ -9,20 +9,25 @@ namespace
 
 Camera::Camera(void) :
 	eye(0.f, 0.f, 0.f), right(1.f, 0.f, 0.f), up(0.f, 1.f, 0.f), back(0.f, 0.f, 1.f),
-	near(0.1f), far(10.f), distance(near), width(tan(DEFAUT_FOV / 2) * 2 * distance), height(width / DEFAUT_ASPECT)
+	near(0.1f), 
+	far(10.f)
 	//NOTE: conventionally, distance is set to near
 {
-
+	distance = near ;
+	width = tan(DEFAUT_FOV / 2) * 2 * distance;
+	height = width / DEFAUT_ASPECT;
 }
 
 Camera::Camera(const Point& E, const Vector& look, const Vector& vp, float fov, float aspect, float near_, float far_)
 	: eye(E), near(near_), far(far_),
 	right(normalize(cross(look, vp))),
-	back(-normalize(look)),
-	distance(near), width(tan(fov / 2) * 2 * distance), height(width / aspect)
-
+	back(-normalize(look))
 {
 	up = cross(back, right);
+	distance = near ;
+	width = tan(fov / 2) * 2 * distance;
+	height = width / aspect;
+
 }
 
 Point Camera::Eye(void) const
@@ -69,7 +74,7 @@ Camera& Camera::Zoom(float factor)
 
 Camera& Camera::Forward(float distance_increment)
 {
-	distance += distance_increment;
+	eye = eye - distance_increment * back;
 	return *this;
 }
 
