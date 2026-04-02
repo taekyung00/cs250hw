@@ -199,6 +199,8 @@ Affine inverse(const Affine& A)
 	return invL * invT;
 }
 
+
+
 Point VectorToPoint(const Vector& v)
 {
 	return Point(v.x, v.y, v.z);

@@ -1,0 +1,3194 @@
+Directory: cs250hw
+Files analyzed: 27
+
+Estimated tokens: 26.2k
+
+Directory structure:
+└── cs250hw/
+    └── project/
+        ├── Affine.cpp
+        ├── Affine.h
+        ├── AffineDemo.cpp
+        ├── AffineTest.cpp
+        ├── Camera.cpp
+        ├── Camera.h
+        ├── CameraFrustumTest.cpp
+        ├── CameraRender2D.cpp
+        ├── CameraRender2D.h
+        ├── CameraRender2DTest.cpp
+        ├── CubeMesh.cpp
+        ├── CubeMesh.h
+        ├── CubeRenderDemo.cpp
+        ├── CubeTest.cpp
+        ├── FrustumMesh.cpp
+        ├── FrustumMesh.h
+        ├── main.cpp
+        ├── Mesh.h
+        ├── Projection.cpp
+        ├── Projection.h
+        ├── Render.cpp
+        ├── Render.h
+        ├── SimpleRender.cpp
+        ├── SimpleRender.h
+        ├── SimpleRenderTest.cpp
+        ├── SnubDodecMesh.cpp
+        └── SnubDodecMesh.h
+
+
+================================================
+FILE: project/Affine.cpp
+================================================
+#include "Affine.h"
+namespace {
+	float dot(const Hcoord& u, const Hcoord& v) {
+		return u.x * v.x + u.y * v.y + u.z * v.z + u.w * v.w;
+	}
+}
+
+Hcoord::Hcoord(float X, float Y, float Z, float W) : x(X), y(Y), z(Z), w(W)
+{
+}
+
+Point::Point(float X, float Y, float Z) : Hcoord(X, Y, Z, 1.0f)
+{
+}
+
+Vector::Vector(float X, float Y, float Z) : Hcoord(X, Y, Z, 0.0f)
+{
+}
+
+Affine::Affine(void)
+{
+	row[0] = Hcoord(1.0f, 0.0f, 0.0f, 0.0f);
+	row[1] = Hcoord(0.0f, 1.0f, 0.0f, 0.0f);
+	row[2] = Hcoord(0.0f, 0.0f, 1.0f, 0.0f);
+	row[3] = Hcoord(0.0f, 0.0f, 0.0f, 1.0f);
+}
+
+Affine::Affine(const Vector& Lx, const Vector& Ly, const Vector& Lz, const Point& D)
+{
+	row[0] = Hcoord(Lx.x, Ly.x, Lz.x, D.x);
+	row[1] = Hcoord(Lx.y, Ly.y, Lz.y, D.y);
+	row[2] = Hcoord(Lx.z, Ly.z, Lz.z, D.z);
+	row[3] = Hcoord(0.0f, 0.0f, 0.0f, 1.0f);
+}
+
+Hcoord operator+(const Hcoord& u, const Hcoord& v)
+{
+	return Hcoord(u.x + v.x, u.y + v.y, u.z + v.z, u.w + v.w);
+}
+
+Hcoord operator-(const Hcoord& u, const Hcoord& v)
+{
+	return Hcoord(u.x - v.x, u.y - v.y, u.z - v.z, u.w - v.w);
+}
+
+Hcoord operator-(const Hcoord& v)
+{
+	return Hcoord(-v.x, -v.y, -v.z, -v.w);
+}
+
+Hcoord operator*(float r, const Hcoord& v)
+{
+	return Hcoord(r * v.x, r * v.y, r * v.z, r * v.w);
+}
+
+Hcoord operator*(const Matrix& A, const Hcoord& v)
+{
+	return Hcoord(dot(A[0], v), dot(A[1], v), dot(A[2], v), dot(A[3], v));
+}
+
+Matrix operator*(const Matrix& A, const Matrix& B)
+{
+	const Hcoord BCol[4] = {
+		Hcoord{B[0][0], B[1][0], B[2][0], B[3][0]},
+		Hcoord{B[0][1], B[1][1], B[2][1], B[3][1]},
+		Hcoord{B[0][2], B[1][2], B[2][2], B[3][2]},
+		Hcoord{B[0][3], B[1][3], B[2][3], B[3][3] } };
+	return Matrix(
+		{ Hcoord{ dot(A[0], BCol[0]), dot(A[0], BCol[1]), dot(A[0], BCol[2]), dot(A[0], BCol[3]) },
+		Hcoord{ dot(A[1], BCol[0]), dot(A[1], BCol[1]), dot(A[1], BCol[2]), dot(A[1], BCol[3]) },
+		Hcoord{ dot(A[2], BCol[0]), dot(A[2], BCol[1]), dot(A[2], BCol[2]), dot(A[2], BCol[3]) },
+		Hcoord{ dot(A[3], BCol[0]), dot(A[3], BCol[1]), dot(A[3], BCol[2]), dot(A[3], BCol[3]) } }
+	);
+}
+
+float dot(const Vector& u, const Vector& v)
+{
+	return u.x * v.x + u.y * v.y + u.z * v.z;
+}
+
+float abs(const Vector& v)
+{
+	return sqrt(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
+}
+
+Vector normalize(const Vector& v)
+{
+	const float r = abs(v);
+	if (Hcoord::near(r, 0))
+	{
+		return Vector(0.0f, 0.0f, 0.0f);
+	}
+	else
+	{
+		return Vector(v.x / r, v.y / r, v.z / r);
+	}
+}
+
+Vector cross(const Vector& u, const Vector& v)
+{
+	return Vector(u.y * v.z - u.z * v.y, u.z * v.x - u.x * v.z, u.x * v.y - u.y * v.x);
+}
+
+Affine rotate(float t, const Vector& v)
+{
+	const float c = cos(t), s = sin(t);
+	const float L = abs(v);
+	Affine R;
+	R[0] = Hcoord(c + (1 - c) * v.x * v.x / (L * L), (1 - c) * v.x * v.y / (L * L) - s * v.z / L, (1 - c) * v.x * v.z / (L * L) + s * v.y / L, 0.0f);
+	R[1] = Hcoord((1 - c) * v.y * v.x / (L * L) + s * v.z / L, c + (1 - c) * v.y * v.y / (L * L), (1 - c) * v.y * v.z / (L * L) - s * v.x / L, 0.0f);
+	R[2] = Hcoord((1 - c) * v.z * v.x / (L * L) - s * v.y / L, (1 - c) * v.z * v.y / (L * L) + s * v.x / L, c + (1 - c) * v.z * v.z / (L * L), 0.0f);
+	return R;
+}
+
+Affine translate(const Vector& v)
+{
+	Affine R;
+	R[0].w = v.x;
+	R[1].w = v.y;
+	R[2].w = v.z;
+	return R;
+}
+
+Affine scale(float r)
+{
+	Affine S;
+	S[0].x = S[1].y = S[2].z = r;
+	return S;
+}
+
+Affine scale(float rx, float ry, float rz)
+{
+	Affine S;
+	S[0].x = rx;
+	S[1].y = ry;
+	S[2].z = rz;
+	return S;
+}
+/**
+* Orthogonality
+* 1. Lx, Ly, Lz are mutually perpendicular to each other.
+* 2. each basis vector has unit length.
+* => Rotation/Reflection matrix is orthogonal matrix, and its inverse is equal to its transpose.
+* But, Scale/Shear matrix is not orthogonal, and its inverse is not equal to its transpose.
+* So we should not use Orthogonality to calculate the inverse of an Affine matrix, because it may contain Scale/Shear component.
+*/
+Affine inverse(const Affine& A)
+{
+	// 1. Calculate the Minors (M_ij) of the 3x3 linear part (L)
+	// M_ij is the determinant of the 2x2 matrix obtained by crossing out row i and column j
+	float M00 = A[1].y * A[2].z - A[1].z * A[2].y;
+	float M01 = A[1].x * A[2].z - A[1].z * A[2].x;
+	float M02 = A[1].x * A[2].y - A[1].y * A[2].x;
+
+	float M10 = A[0].y * A[2].z - A[0].z * A[2].y;
+	float M11 = A[0].x * A[2].z - A[0].z * A[2].x;
+	float M12 = A[0].x * A[2].y - A[0].y * A[2].x;
+
+	float M20 = A[0].y * A[1].z - A[0].z * A[1].y;
+	float M21 = A[0].x * A[1].z - A[0].z * A[1].x;
+	float M22 = A[0].x * A[1].y - A[0].y * A[1].x;
+
+	// 2. Calculate the Cofactors (C_ij) by applying the alternating signs: (-1)^(i+j)
+	float C00 = M00;
+	float C01 = -M01;
+	float C02 = M02;
+
+	float C10 = -M10;
+	float C11 = M11;
+	float C12 = -M12;
+
+	float C20 = M20;
+	float C21 = -M21;
+	float C22 = M22;
+
+	// 3. Calculate the determinant using the first row of L and the first row of C
+	// det(L) = L_11 * C_11 + L_12 * C_12 + L_13 * C_13
+	float det = A[0].x * C00 + A[0].y * C01 + A[0].z * C02;
+
+	// Check if the matrix is invertible
+	assert(std::abs(det) > 1e-5f);
+
+	// 4. Calculate the inverse of the 3x3 matrix: (1/det) * C^T
+	// Transpose the cofactor matrix (C^T) by swapping row and column indices here
+	float invDet = 1.0f / det;
+	Vector invLx(C00 * invDet, C10 * invDet, C20 * invDet);
+	Vector invLy(C01 * invDet, C11 * invDet, C21 * invDet);
+	Vector invLz(C02 * invDet, C12 * invDet, C22 * invDet);
+
+	// Create the inverse linear transformation matrix (L^-1)
+	Affine invL(invLx, invLy, invLz, Point(0.0f, 0.0f, 0.0f));
+
+	// Create the inverse translation matrix (T^-1)
+	// The inverse of translating by vector v is translating by vector -v
+	Vector original_translation(A[0].w, A[1].w, A[2].w);
+	Affine invT = translate(-original_translation);
+
+	// Return the combined inverse transformation: L^-1 * T^-1
+	return invL * invT;
+}
+
+
+
+Point VectorToPoint(const Vector& v)
+{
+	return Point(v.x, v.y, v.z);
+}
+
+Vector PointToVector(const Point& p)
+{
+	return Vector(p.x, p.y, p.z);
+}
+
+
+
+================================================
+FILE: project/Affine.h
+================================================
+// Affine.h
+// -- points, vectors, transformations in 3D
+// cs250 8/17
+
+#ifndef CS250_AFFINE_H
+#define CS250_AFFINE_H
+
+#include <cmath>
+#include <cassert>
+
+
+struct Hcoord {
+  float x, y, z, w;
+  explicit Hcoord(float X=0, float Y=0, float Z=0, float W=0);
+  float& operator[](int i) { return *(&x+i); }
+  float operator[](int i) const { return *(&x+i); }
+  static bool near(float x, float y) { return std::abs(x-y) < 1e-5f; }
+};
+
+
+struct Point : Hcoord {
+  explicit Point(float X=0, float Y=0, float Z=0);
+  Point(const Hcoord& v) : Hcoord(v) { assert(near(w,1)); }
+};
+  
+
+struct Vector : Hcoord {
+  explicit Vector(float X=0, float Y=0, float Z=0);
+  Vector(const Hcoord& v) : Hcoord(v) { assert(near(w,0)); }
+};
+
+
+struct Matrix {
+  Hcoord row[4];
+  Hcoord& operator[](int i) { return row[i]; }
+  const Hcoord& operator[](int i) const { return row[i]; }
+};
+
+
+struct Affine : Matrix {
+  Affine(void);
+  Affine(const Vector& Lx, const Vector& Ly, const Vector& Lz, const Point& D);
+  Affine(const Matrix& M) : Matrix(M)                 
+      { assert(Hcoord::near(M[3][0],0) && Hcoord::near(M[3][1],0)
+               && Hcoord::near(M[3][2],0) && Hcoord::near(M[3][3],1)); }
+};
+
+
+Hcoord operator+(const Hcoord& u, const Hcoord& v);
+Hcoord operator-(const Hcoord& u, const Hcoord& v);
+Hcoord operator-(const Hcoord& v);
+Hcoord operator*(float r, const Hcoord& v);
+Hcoord operator*(const Matrix& A, const Hcoord& v);
+Matrix operator*(const Matrix& A, const Matrix& B);
+float dot(const Vector& u, const Vector& v);
+float abs(const Vector& v);
+Vector normalize(const Vector& v);
+Vector cross(const Vector& u, const Vector& v);
+Affine rotate(float t, const Vector& v);
+Affine translate(const Vector& v);
+Affine scale(float r);
+Affine scale(float rx, float ry, float rz);
+Affine inverse(const Affine& A);
+Point VectorToPoint(const Vector& v);
+Vector PointToVector(const Point& p);
+
+
+#endif
+
+
+
+
+================================================
+FILE: project/AffineDemo.cpp
+================================================
+// AffineDemo.cpp
+// -- demo program for the 'Affine' package
+// cs250 9/17
+//
+// To compile under windows (from Visual Studio 2017 command prompt):
+//     cl /EHsc AffineDemo.cpp Affine.cpp opengl32.lib SDL2.lib\
+//        SDL2main.lib glew32.lib /link /subsystem:console
+//     [you can substitute 'Affine.cpp' with 'Affine.lib']
+// To compile under Linux:
+//     g++ AffineDemo.cpp Affine.cpp -lGL -lGLEW -lSDL2
+
+#include <iostream>
+#include <algorithm>
+#include <cstdlib>
+#include <ctime>
+#include <SDL2/SDL.h>
+#include <GL/glew.h>
+#include <GL/gl.h>
+#include "Affine.h"
+using namespace std;
+
+
+const float PI = 4.0f*atan(1.0f);
+const Point O(0,0,0);
+const Vector EZ(0,0,1);
+
+namespace {
+  float frand(float a=0, float b=1) {
+    return a + (b-a)*float(rand())/float(RAND_MAX);
+  }
+}
+
+
+class Client {
+  public:
+    Client(void);
+    ~Client(void);
+    void draw(float dt);
+    void keypress(SDL_Keycode kc);
+    void resize(int W, int H);
+  private:
+    float time;
+    GLint ucolor,
+          utransform;
+    GLuint vertex_buffer,
+           edge_buffer;
+    int cube_count;
+    Point center;
+    float rsize, rot_scale, rot_rate;
+    Vector rot_axis;
+    Matrix Pers;
+};
+
+
+Client::Client(void)
+    : time(0) {
+
+  // compile fragment shader
+  const char *fragment_shader_text =
+    "#version 130\n\
+     uniform vec3 color;\
+     out vec4 frag_color;\
+     void main(void) {\
+       frag_color = vec4(color,1);\
+     }";
+  GLuint fshader = glCreateShader(GL_FRAGMENT_SHADER);
+  glShaderSource(fshader,1,&fragment_shader_text,0);
+  glCompileShader(fshader);
+
+  // compile vertex shader
+  const char *vertex_shader_text =
+    "#version 130\n\
+     attribute vec4 position;\
+     uniform mat4 transform;\
+     void main() {\
+       gl_Position = transform * position;\
+     }";
+  GLuint vshader = glCreateShader(GL_VERTEX_SHADER);
+  glShaderSource(vshader,1,&vertex_shader_text,0);
+  glCompileShader(vshader);
+
+  // link shader program
+  GLuint program = glCreateProgram();
+  glAttachShader(program,fshader);
+  glAttachShader(program,vshader);
+  glLinkProgram(program);
+  glUseProgram(program);
+
+  // shader uniform variable locations
+  utransform = glGetUniformLocation(program,"transform");
+  ucolor = glGetUniformLocation(program,"color");
+
+  // upload cube vertices to GPU
+  glGenBuffers(1,&vertex_buffer);
+  glBindBuffer(GL_ARRAY_BUFFER,vertex_buffer);
+  Point cube_verts[8] = { Point( 0.5f, 0.5f,0.5f), Point( 0.5f, 0.5f,-0.5f),
+                          Point( 0.5f,-0.5f,0.5f), Point( 0.5f,-0.5f,-0.5f),
+                          Point(-0.5f, 0.5f,0.5f), Point(-0.5f, 0.5f,-0.5f),
+                          Point(-0.5f,-0.5f,0.5f), Point(-0.5f,-0.5f,-0.5f) };
+  glBufferData(GL_ARRAY_BUFFER,sizeof(cube_verts),cube_verts,GL_STATIC_DRAW);
+
+  // bind vertex array to 'position' shader attribute
+  GLint aposition;
+  aposition = glGetAttribLocation(program,"position");
+  glVertexAttribPointer(aposition,4,GL_FLOAT,false,sizeof(Point),0);
+  glEnableVertexAttribArray(aposition);
+
+  // upload cube edge list to GPU
+  glGenBuffers(1,&edge_buffer);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,edge_buffer);
+  unsigned cube_edges[12][2] = { {0,1}, {0,2}, {0,4}, {1,3},
+                                 {1,5}, {2,3}, {2,6}, {3,7},
+                                 {4,5}, {4,6}, {5,7}, {6,7} };
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(cube_edges),cube_edges,GL_STATIC_DRAW);
+
+  // elementary perspective projection
+  Pers.row[0] = Hcoord(1, 0, 0, 0);
+  Pers.row[1] = Hcoord(0, 1, 0, 0);
+  Pers.row[2] = Hcoord(0, 0, 1, 0);
+  Pers.row[3] = Hcoord(0, 0,-1, 0);
+
+  // rotating figure parameters
+  center = Point(0,0,-1.25f);
+  cube_count = 3;
+  rsize = 1.0f/cube_count;
+  rot_scale = 0.75f;
+  rot_rate = 2.0f*PI/10.0f;
+  rot_axis = normalize(Vector(frand(),frand(),frand()));
+}
+
+
+Client::~Client(void) {
+  glDeleteBuffers(1,&edge_buffer);
+  glDeleteBuffers(1,&vertex_buffer);
+  GLint program;
+  glGetIntegerv(GL_CURRENT_PROGRAM,&program);
+  glUseProgram(0);
+  GLuint shaders[2];
+  GLsizei count;
+  glGetAttachedShaders(program,2,&count,shaders);
+  for (int i=0; i < count; ++i)
+    glDeleteShader(shaders[i]);
+  glDeleteProgram(program);
+}
+
+
+void Client::draw(float dt) {
+
+  // clear frame buffer
+  glClearColor(1,1,1,1);
+  glClear(GL_COLOR_BUFFER_BIT);
+
+  // draw a rotating array of cubes
+  Affine R = rotate(acos(dot(EZ,rot_axis)),cross(EZ,rot_axis))
+             * rotate(rot_rate*time,EZ);
+  for (int i=0; i < cube_count; ++i) {
+    for (int j=0; j < cube_count; ++j) {
+      for (int k=0; k < cube_count; ++k) {
+        // modeling transformation
+        Vector offset = rsize * (Vector(float(i),float(j),float(k))
+                                 - 0.5f*(cube_count-1)*Vector(1,1,1));
+        Affine obj2world = translate(center-O) * R * translate(offset)
+                           * scale(rot_scale*rsize);
+        // perspective projection
+        Matrix obj2dev = Pers * obj2world;
+        // render
+        glLineWidth(2);
+        glUniformMatrix4fv(utransform,1,true,(float*)&obj2dev);
+        glUniform3f(ucolor,i*rsize,j*rsize,k*rsize);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,edge_buffer);
+        glDrawElements(GL_LINES,2*12,GL_UNSIGNED_INT,0);
+      }
+    }
+  }
+
+  time += dt;
+}
+
+
+void Client::keypress(SDL_Keycode kc) {
+  if (kc == SDLK_SPACE) {
+    cube_count = 1 + cube_count % 10;
+    rsize = 1.0f / cube_count;
+    if (cube_count == 1)
+    {
+        rot_axis = normalize(Vector(frand(), frand(), frand()));
+    }
+  }
+}
+
+
+void Client::resize(int W, int H) {
+  int D = min(W,H);
+  glViewport(0,0,D,D);
+}
+
+
+/////////////////////////////////////////////////////////////////
+//
+/////////////////////////////////////////////////////////////////
+
+int main(int /*argc*/, char * /*argv*/[]) {
+  srand(unsigned(time(0)));
+
+  // SDL: initialize and create a window
+  SDL_Init(SDL_INIT_VIDEO);
+  SDL_Window *window = SDL_CreateWindow("CS250: Affine Demo",SDL_WINDOWPOS_UNDEFINED,
+                                        SDL_WINDOWPOS_UNDEFINED,600,600,
+                                        SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
+  SDL_GLContext context = SDL_GL_CreateContext(window);
+
+  // GLEW: get function bindings (if possible)
+  GLenum value = glewInit();
+  if (value != GLEW_OK) {
+    cout << glewGetErrorString(value) << endl;
+    SDL_GL_DeleteContext(context);
+    SDL_Quit();
+    return -1;
+  }
+
+  // animation loop
+  bool done = false;
+  Client *client = new Client();
+  Uint32 ticks_last = SDL_GetTicks();
+  while (!done) {
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+      switch (event.type) {
+        case SDL_QUIT:
+          done = true;
+          break;
+        case SDL_KEYDOWN:
+          if (event.key.keysym.sym == SDLK_ESCAPE)
+            done = true;
+          else
+            client->keypress(event.key.keysym.sym);
+          break;
+        case SDL_WINDOWEVENT:
+          if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+            client->resize(event.window.data1,event.window.data2);
+          break;
+      }
+    }
+    Uint32 ticks = SDL_GetTicks();
+    float dt = 0.001f*(ticks - ticks_last);
+    ticks_last = ticks;
+    client->draw(dt);
+    SDL_GL_SwapWindow(window);
+  }
+
+  // clean up
+  delete client;
+  SDL_GL_DeleteContext(context);
+  SDL_Quit();
+  return 0;
+}
+
+
+
+
+================================================
+FILE: project/AffineTest.cpp
+================================================
+// AffineTest.cpp
+// cs250 8/17
+
+#include <iostream>
+#include <iomanip>
+#include <cmath>
+#include "Affine.h"
+using namespace std;
+
+
+ostream& operator<<(ostream& s, const Hcoord& v) {
+  return s << '[' << v.x << ',' << v.y << ',' << v.z << ',' << v.w << ']';
+}
+
+
+ostream& operator<<(ostream& s, const Matrix& A) {
+  s << '{';
+  for (int i=0; i < 4; ++i) {
+    s << '{';
+    for (int j=0; j < 4; ++j)
+      s << A[i][j] << ((j < 3) ? ',' : '}');
+    s << ((i < 3) ? ',' : '}');
+  }
+  return s;
+}
+
+
+int main(void) {
+  const Point O;
+  const float pi = 4.0f*atan(1.0f);
+  cout << fixed << setprecision(3);
+
+  Vector v(4,-5,3);
+  Affine A = translate(v) * scale(3);
+  cout << A << endl;
+
+  Point P(9,-2,-7);
+  Point Q = O + 3*(P-O) + v,
+        R = A*P;
+  cout << abs(R-Q) << endl;
+
+  Vector u(7,5,1);
+  float t = 0.3f*pi;
+  A = rotate(t,v) * translate(u);
+  cout << A << endl;
+
+  v = normalize(v);
+  Q = O + cos(t)*(P+u-O) + (1-cos(t))*dot(v,P+u-O)*v + sin(t)*cross(v,P+u-O);
+  R = A*P;
+  cout << abs(R-Q) << endl;
+  
+  Affine B = Affine(Vector(5,2,1),Vector(1,4,5),Vector(9,8,2),Point(4,4,3));
+  cout << B << endl;
+
+  Affine iB = inverse(B);
+  cout << (iB*B) << endl;
+
+  u = 3*P + 2*Q - 5*R;
+  cout << u << endl;
+  P = 3*P + 2*Q - 7*R; // this should fail ...
+
+  return 0;
+}
+
+
+
+
+================================================
+FILE: project/Camera.cpp
+================================================
+/******************************************************************************
+ * File: Camera.cpp
+ * Author: Taekyung Ho
+ * Course: CS250
+ * Assignment: Camera Frustum Programming Assignment
+ * Description: Implements a flexible camera class using a right-handed
+ * coordinate system (Right, Up, Back vectors).
+ *****************************************************************************/
+#include "Camera.h"
+#include <cmath>
+
+namespace
+{
+	const float PI = 3.1415926535897932384626433832795f;
+	const float DEFAUT_FOV = PI / 2;
+	const float DEFAUT_ASPECT = 1.f;
+}
+
+/**
+ * Default Constructor: Places camera at origin looking at -Z.
+ */
+Camera::Camera(void) :
+	eye(0.f, 0.f, 0.f), right(1.f, 0.f, 0.f), up(0.f, 1.f, 0.f), back(0.f, 0.f, 1.f),
+	near(0.1f), far(10.f)
+{
+	distance = near;
+	width = tan(DEFAUT_FOV / 2) * 2 * distance;
+	height = width / DEFAUT_ASPECT;
+}
+
+/**
+ * Non-default Constructor: Initializes camera with orientation vectors.
+ */
+Camera::Camera(const Point& E, const Vector& look, const Vector& vp, float fov, float aspect, float near_, float far_)
+	: eye(E), near(near_), far(far_)
+{
+	// Construct the orthonormal basis for the camera
+	right = normalize(cross(look, vp));
+	back = -normalize(look);
+	up = cross(back, right);
+
+	distance = near;
+	width = tan(fov / 2) * 2 * distance;
+	height = width / aspect;
+}
+
+Point Camera::Eye(void) const { return eye; }
+Vector Camera::Right(void) const { return right; }
+Vector Camera::Up(void) const { return up; }
+Vector Camera::Back(void) const { return back; }
+Vector Camera::ViewportGeometry(void) const { return Vector(width, height, distance); }
+float Camera::NearDistance(void) const { return near; }
+float Camera::FarDistance(void) const { return far; }
+
+/**
+ * Zoom operation: Multiplies viewport dimensions by a factor.
+ */
+Camera& Camera::Zoom(float factor)
+{
+	width *= factor;
+	height *= factor;
+	return *this;
+}
+
+/**
+ * Moves camera along its view direction.
+ */
+Camera& Camera::Forward(float distance_increment)
+{
+	eye = eye - distance_increment * back;
+	return *this;
+}
+
+/**
+ * Rotates camera around its vertical (Up) axis.
+ */
+Camera& Camera::Yaw(float angle)
+{
+	Affine a = rotate(angle, up);
+	right = a * right;
+	back = a * back;
+	return *this;
+}
+
+/**
+ * Rotates camera around its horizontal (Right) axis.
+ */
+Camera& Camera::Pitch(float angle)
+{
+	Affine a = rotate(angle, right);
+	up = a * up;
+	back = a * back;
+	return *this;
+}
+
+/**
+ * Rotates camera around its viewing (Back) axis.
+ */
+Camera& Camera::Roll(float angle)
+{
+	Affine a = rotate(angle, back);
+	right = a * right;
+	up = a * up;
+	return *this;
+}
+
+
+================================================
+FILE: project/Camera.h
+================================================
+// Camera.h
+// -- 3D camera class
+// cs250 1/15
+
+#ifndef CS250_CAMERA_H
+#define CS250_CAMERA_H
+
+#include "Affine.h"
+
+
+class Camera {
+  public:
+    Camera(void);
+    Camera(const Point& E, const Vector& look, const Vector& vp,
+           float fov, float aspect, float near, float far);
+    Point Eye(void) const;
+    Vector Right(void) const;
+    Vector Up(void) const;
+    Vector Back(void) const;
+    Vector ViewportGeometry(void) const;
+    float NearDistance(void) const;
+    float FarDistance(void) const;
+    Camera& Zoom(float factor);
+    Camera& Forward(float distance_increment);
+    Camera& Yaw(float angle);
+    Camera& Pitch(float angle);
+    Camera& Roll(float angle);
+  private:
+    Point eye;
+    Vector right, up, back;
+    float width, height, distance,
+          near, far;
+};
+
+
+#endif
+
+
+
+
+================================================
+FILE: project/CameraFrustumTest.cpp
+================================================
+// CameraFrustumTest.cpp
+// -- display the camera (uses Camera and FrustumMesh)
+// cs250 5/17
+//
+// To compile/link using Visual Studio command prompt:
+//     cl /EHsc CameraFrustumTest.cpp Affine.lib Render.lib SimpleRender.lib
+//        Camera.cpp FrustumMesh.cpp opengl32.lib glew32.lib SDL2.lib
+//        SDL2main.lib /link /subsystem:console
+// Under Linux:
+//     g++ CameraFrustumTest.cpp Affine.cpp Render.cpp SimpleRender.cpp\
+//         Camera.cpp FrustumMesh.cpp -lGL -lGLEW -lSDL2
+
+#include <iostream>
+#include <algorithm>
+#include <cmath>
+#include <SDL2/SDL.h>
+#include <GL/glew.h>
+#include <GL/gl.h>
+#include "Render.h"
+#include "SimpleRender.h"
+#include "Camera.h"
+#include "FrustumMesh.h"
+using namespace std;
+
+
+const float PI = 4.0f*atan(1.0f);
+const Point O(0,0,0);
+const Vector EX(1,0,0),
+             EY(0,1,0),
+             EZ(0,0,1);
+const Vector BLUE(0,0,1),
+             GREEN(0,1,0),
+             GRAY(0.8f,0.8f,0.8f);
+
+
+class Client {
+  public:
+    Client(void);
+    ~Client(void);
+    void draw(float dt);
+    void keypress(SDL_Keycode kc);
+    void resize(int W, int H);
+  private:
+    Camera camera;
+    FrustumMesh frustum;
+    bool draw_solid;
+    Render *render;
+    SimpleRender *srender;
+};
+
+
+Client::Client(void)
+    :  frustum(0.4f*PI,1.5f,1,3) {
+  render = new Render();
+  srender = new SimpleRender(*render);
+  camera = Camera(O-10*EZ,-EZ,EY,0.4f*PI,1.5f,1,3);
+  draw_solid = false;
+}
+
+
+Client::~Client(void) {
+  delete srender;
+  delete render;
+}
+
+
+void Client::draw(float /*dt*/) {
+  render->ClearBuffers(GRAY);
+
+  // Draw view frustum
+  Affine camera_to_world(camera.Right(),camera.Up(),camera.Back(),camera.Eye());
+  if (draw_solid)
+    srender->DisplayFaces(frustum,camera_to_world,GREEN);
+  else
+    srender->DisplayEdges(frustum,camera_to_world,BLUE);
+}
+
+
+void Client::keypress(SDL_Keycode kc) {
+  const float angle_increment = PI/180.0f,
+              dist_increment = 0.1f,
+              zoom_increment = 0.95f;
+  switch (kc) {
+    case SDLK_SPACE:
+      draw_solid = !draw_solid;
+      break;
+    case SDLK_w:
+      camera.Pitch(angle_increment);
+      break;
+    case SDLK_x:
+      camera.Pitch(-angle_increment);
+      break;
+    case SDLK_a:
+      camera.Yaw(angle_increment);
+      break;
+    case SDLK_d:
+      camera.Yaw(-angle_increment);
+      break;
+    case SDLK_s:
+      camera.Roll(angle_increment);
+      break;
+    case SDLK_j:
+      camera.Roll(-angle_increment);
+      break;
+    case SDLK_u:
+      camera.Forward(dist_increment);
+      break;
+    case SDLK_m:
+      camera.Forward(-dist_increment);
+      break;
+    case SDLK_1:
+      camera.Zoom(zoom_increment);
+      break;
+    case SDLK_2:
+      camera.Zoom(1.0f/zoom_increment);
+      break;
+  }
+  if (kc == SDLK_1 || kc == SDLK_2) {
+    float fov = 2*atan(0.5f*camera.ViewportGeometry().x
+                       /camera.ViewportGeometry().z),
+          aspect = camera.ViewportGeometry().x/camera.ViewportGeometry().y;
+    frustum = FrustumMesh(fov,aspect,1,3);
+  }
+}
+
+
+void Client::resize(int W, int H) {
+  int D = min(W,H);
+  glViewport(0,0,D,D);
+}
+
+
+/////////////////////////////////////////////////////////////////
+//
+/////////////////////////////////////////////////////////////////
+
+int main(int /*argc*/, char * /*argv*/[]) {
+
+  // SDL: initialize and create a window
+  SDL_Init(SDL_INIT_VIDEO);
+  const char *title = "CS 250: Camera+Frustum Test";
+  int width = 600,
+      height = 600;
+  SDL_Window *window = SDL_CreateWindow(title,SDL_WINDOWPOS_UNDEFINED,
+                                        SDL_WINDOWPOS_UNDEFINED,width,height,
+                                        SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
+  SDL_GLContext context = SDL_GL_CreateContext(window);
+
+  // GLEW: get function bindings (if possible)
+  glewInit();
+  if (!GLEW_VERSION_2_0) {
+    cout << "needs OpenGL version 2.0 or better" << endl;
+    return -1;
+  }
+
+  // animation loop
+  try {
+    Client *client = new Client();
+    bool done = false;
+    Uint32 ticks_last = SDL_GetTicks();
+    while (!done) {
+      SDL_Event event;
+      while (SDL_PollEvent(&event)) {
+        switch (event.type) {
+          case SDL_QUIT:
+            done = true;
+            break;
+          case SDL_KEYDOWN:
+            if (event.key.keysym.sym == SDLK_ESCAPE)
+              done = true;
+            else
+              client->keypress(event.key.keysym.sym); 
+            break;
+          case SDL_WINDOWEVENT:
+            if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+              client->resize(event.window.data1,event.window.data2);
+            break;
+        }
+      }
+      Uint32 ticks = SDL_GetTicks();
+      float dt = 0.001f*(ticks - ticks_last);
+      ticks_last = ticks;
+      client->draw(dt);
+      SDL_GL_SwapWindow(window);
+    }
+    delete client;
+  }
+
+  catch (exception &e) {
+    cout << e.what() << endl;
+  }
+
+  SDL_GL_DeleteContext(context);
+  SDL_Quit();
+  return 0;
+}
+
+
+
+
+================================================
+FILE: project/CameraRender2D.cpp
+================================================
+#include "CameraRender2D.h"
+#include "Projection.h"
+namespace
+{
+	/**
+	 * Determines if a face is facing the camera.
+	 * Returns true if the dot product of the face normal and the vector to the
+	 * camera is positive.
+	 */
+	bool is_frontface(const Vector& v1, const Vector& v2)
+	{
+		return dot(v1, v2) > 0;
+	}
+}
+
+CameraRender2D::CameraRender2D(Render& r) : render(r)
+{
+}
+
+CameraRender2D::~CameraRender2D(void)
+{
+}
+
+void CameraRender2D::SetCamera(const Camera& cam)
+{
+	world2camera = WorldToCamera(cam);
+	camera2ndc = CameraToNDC(cam);
+	cam_vertices.push_back(cam.Eye());//center of proj
+}
+
+void CameraRender2D::DisplayEdges(Mesh& m, const Affine& ModelToWorld, const Vector& color)
+{
+	render.SetColor(color);
+	int vertexCount = m.VertexCount();
+	std::vector<Point> vertices;
+	vertices.reserve(vertexCount);
+
+	// Combined Model-to-World and World-to-Camera and Camera-to-NDC
+	Matrix M = camera2ndc * world2camera * ModelToWorld;
+
+	for (int i = 0; i < vertexCount; i++)
+	{
+		Hcoord result = M * m.GetVertex(i);
+
+		// Explicit Perspective Divide 
+		float w = result.w;
+		result.x /= w;
+		result.y /= w;
+		result.z /= w;
+		result.w /= w;
+		vertices.push_back(Point(result.x, result.y, result.z));
+	}
+
+	// Draw lines for each edge defined in the mesh
+	int edgeCount = m.EdgeCount();
+	for (int i = 0; i < edgeCount; i++)
+	{
+		int index1 = m.GetEdge(i).index1;
+		int index2 = m.GetEdge(i).index2;
+		render.DrawLine(vertices[index1], vertices[index2]);
+	}
+}
+
+/**
+ * Renders the mesh as a solid with diffuse shading.
+ * Uses backface culling to only draw visible faces and calculates
+ * shading based on the light direction L=<0,0,1>
+ */
+void CameraRender2D::DisplayFaces(Mesh& m, const Affine& ModelToWorld, const Vector& color)
+{
+	int vertexCount = m.VertexCount();
+	std::vector<Point> vertices;
+	vertices.reserve(vertexCount);
+
+	// Combined Model-to-World and World-to-Camera and Camera-to-NDC
+	Matrix M = camera2ndc * world2camera * ModelToWorld;
+	for (int i = 0; i < vertexCount; i++)
+	{
+		Hcoord result = M * m.GetVertex(i);
+		float w = result.w;
+		result.x /= w;
+		result.y /= w;
+		result.z /= w;
+		result.w /= w;
+		vertices.push_back(Point(result.x, result.y, result.z));
+	}
+
+	int faceCount = m.FaceCount();
+	const Vector line_shines{ 0, 0, 1 }; // Light direction 
+
+	for (int i = 0; i < faceCount; i++)
+	{
+		int index1 = m.GetFace(i).index1;
+		int index2 = m.GetFace(i).index2;
+		int index3 = m.GetFace(i).index3;
+
+		// Calculate face normal in world space for backface culling and shading
+		const Point world_vertices[3] = { ModelToWorld * m.GetVertex(index1), ModelToWorld * m.GetVertex(index2), ModelToWorld * m.GetVertex(index3) };
+		Vector normal = cross(world_vertices[1] - world_vertices[0], world_vertices[2] - world_vertices[0]);
+
+		// Vector from a point on the face to the Center of Projection 
+		Vector PE = PointToVector(cam_vertices[0]) - PointToVector(world_vertices[0]);
+
+		// Backface culling check 
+		if (is_frontface(normal, PE))
+		{
+			// Calculate diffuse shading coefficient mu
+			float diffuse = dot(line_shines, normal) / abs(normal);
+			diffuse = diffuse < 0 ? -diffuse : diffuse;
+
+			// Set the shaded color and fill the triangle
+			render.SetColor(Vector{ diffuse * color.x, diffuse * color.y, diffuse * color.z });
+			render.FillTriangle(vertices[index1], vertices[index2], vertices[index3]);
+		}
+	}
+}
+
+
+
+================================================
+FILE: project/CameraRender2D.h
+================================================
+// CameraRender2D.h
+// -- display edges/faces of a mesh using a camera
+// cs250 9/16
+
+#ifndef CS250_CAMERARENDER2D_H
+#define CS250_CAMERARENDER2D_H
+
+#include <vector>
+#include "Render.h"
+#include "Camera.h"
+#include "Mesh.h"
+
+
+class CameraRender2D {
+  public:
+    CameraRender2D(Render &r);
+    ~CameraRender2D(void);
+    void SetCamera(const Camera &cam);
+    void DisplayEdges(Mesh& m, const Affine& A, const Vector& color);
+    void DisplayFaces(Mesh& m, const Affine& A, const Vector& color);
+  private:
+    Render &render;
+    Affine world2camera;
+    Matrix camera2ndc;
+    std::vector<Point> cam_vertices;
+    std::vector<Point> ndc_vertices;
+};
+
+#endif
+
+
+
+
+================================================
+FILE: project/CameraRender2DTest.cpp
+================================================
+// CameraRender2DTest.cpp
+// -- rendering a scene from a camera's point of view,
+//    no hidden surface removal.
+// cs200 9/17
+//
+// Visual Studio command prompt:
+//     cl /EHsc CameraRender2DTest.cpp Affine.lib Camera.lib FrustumMesh.lib
+//        Projection.cpp CubeMesh.lib SnubDodecMesh.cpp Render.lib
+//        CameraRender2D.cpp opengl32.lib glew32.lib SLD2.lib SDL2main.lib
+//        /link /subsystem:console
+//
+// Linux command line:
+//     g++ CameraRender2DTest.cpp Affine.cpp Camera.cpp FrustumMesh.cpp
+//         CubeMesh.cpp SnubDodecMesh.cpp Render.cpp Projection.cpp
+//         CameraRender2D.cpp -lGL -lGLEW -lSDL2
+
+#include <iostream>
+#include <algorithm>
+#include <SDL2/SDL.h>
+#include <GL/glew.h>
+#include <GL/gl.h>
+#include "Projection.h"
+#include "CameraRender2D.h"
+#include "FrustumMesh.h"
+#include "CubeMesh.h"
+#include "SnubDodecMesh.h"
+using namespace std;
+
+
+const Point O(0,0,0);
+const Vector EX(1,0,0),
+             EY(0,1,0),
+             EZ(0,0,1);
+const float PI = 4.0f*atan(1.0f);
+const Vector WHITE(1,1,1),
+             PURPLE(1,0,1),
+             BLACK(0,0,0),
+             RED(1,0,0),
+             GREEN(0,1,0);
+
+
+class Client {
+  public:
+    Client(void);
+    ~Client(void);
+    void draw(float dt);
+    void keypress(SDL_Keycode kc);
+    void resize(int W, int H);
+  private:
+    Camera cam1, cam2,
+           cam2_0;
+    SnubDodecMesh snub_mesh;
+    CubeMesh cube_mesh;
+    Affine cube2world[9],
+           snub2world;
+    float snub_rot_rate;
+    Vector snub_rot_axis;
+    Point snub_center;
+    bool use_cam1,
+         draw_solid;
+    Render *render;
+    CameraRender2D *crender;
+};
+
+
+Client::Client(void) {
+  render = new Render();
+  crender = new CameraRender2D(*render);
+
+  snub_rot_rate = 2*PI/10.0f;
+  snub_rot_axis = EY;
+  snub_center = Point(0,0,-2);
+  use_cam1 = true;
+  draw_solid = false;
+
+  cam1 = Camera(O+EZ,-EZ,EY,0.5f*PI,1,0.01f,10);
+  cam2_0 = Camera(O+2*EX-2*EZ,-EX,EY,0.5f*PI,1,0.01f,10);
+  cam2 = cam2_0;
+  snub2world = translate(snub_center-O);
+  for (int i=0; i < 9; ++i)
+    cube2world[i] = translate(Vector(float((i%3)-1),-1.1f,float(-(i/3)-1)))
+                    * scale(0.375f,0.05f,0.375f);
+
+  glDisable(GL_DEPTH_TEST);
+}
+
+
+Client::~Client(void) {
+  delete crender;
+  delete render;
+}
+
+
+void Client::draw(float dt) {
+  render->ClearBuffers(WHITE);
+
+  Camera& cam = use_cam1 ? cam1 : cam2;
+  crender->SetCamera(cam);
+
+  // Draw cubes
+  for (int i=0; i < 9; ++i)
+    if (draw_solid)
+      crender->DisplayFaces(cube_mesh,cube2world[i],PURPLE);
+    else
+      crender->DisplayEdges(cube_mesh,cube2world[i],PURPLE);
+
+  // Draw snub dodecahedron
+  snub2world = translate(snub_center-O)
+               * rotate(snub_rot_rate*dt,snub_rot_axis)
+               * translate(O-snub_center)
+               * snub2world;
+  if (draw_solid)
+    crender->DisplayFaces(snub_mesh,snub2world,GREEN);
+  else
+    crender->DisplayEdges(snub_mesh,snub2world,GREEN);
+
+  // Draw (other) camera mesh
+  if (use_cam1) {
+    const float& D = cam2.ViewportGeometry().z,
+                 W = cam2.ViewportGeometry().x,
+                 H = cam2.ViewportGeometry().y,
+                 N = cam2.NearDistance(),
+                 F = 1; // for visual appeal
+    float fov = 2*atan(0.5f*W/D);
+    FrustumMesh frustum(fov,W/H,N,F);
+    crender->DisplayEdges(frustum,CameraToWorld(cam2),BLACK);
+  }
+  else {
+    const float& D = cam1.ViewportGeometry().z,
+                 W = cam1.ViewportGeometry().x,
+                 H = cam1.ViewportGeometry().y,
+                 N = cam1.NearDistance(),
+                 F = 1;
+    float fov = 2*atan(0.5f*W/D);
+    FrustumMesh frustum(fov,W/H,N,F);
+    crender->DisplayEdges(frustum,CameraToWorld(cam1),RED);
+  }
+}
+
+
+void Client::keypress(SDL_Keycode kc) {
+  // respond to keyboard input
+  //   kc: SDL keycode (e.g., SDLK_SPACE, SDLK_a, SDLK_s)
+  const float angle_increment = PI/180.0f,
+              dist_increment = 0.1f,
+              zoom_increment = 0.95f;
+  switch (kc) {
+    case SDLK_w:
+      cam2.Pitch(angle_increment);
+      break;
+    case SDLK_x:
+      cam2.Pitch(-angle_increment);
+      break;
+    case SDLK_a:
+      cam2.Yaw(angle_increment);
+      break;
+    case SDLK_d:
+      cam2.Yaw(-angle_increment);
+      break;
+    case SDLK_s:
+      cam2.Roll(angle_increment);
+      break;
+    case SDLK_j:
+      cam2.Roll(-angle_increment);
+      break;
+    case SDLK_u:
+      cam2.Forward(dist_increment);
+      break;
+    case SDLK_m:
+      cam2.Forward(-dist_increment);
+      break;
+    case SDLK_SPACE:
+      draw_solid = !draw_solid;
+      break;
+    case SDLK_1:
+      cam2.Zoom(zoom_increment);
+      break;
+    case SDLK_2:
+      cam2.Zoom(1.0f/zoom_increment);
+      break;
+    case SDLK_3:
+      use_cam1 = !use_cam1;
+      break;
+    case SDLK_4:
+      cam2 = cam2_0;
+  }
+}
+
+
+void Client::resize(int W, int H) {
+  glViewport(0,0,W,H);
+  float aspect = float(W)/float(H);
+  cam1 = Camera(cam1.Eye(),-cam1.Back(),EY,0.5f*PI,aspect,0.01f,10);
+  cam2_0 = Camera(cam2.Eye(),-cam2.Back(),EY,0.5f*PI,aspect,0.01f,10);
+  cam2 = cam2_0;
+}
+
+
+/////////////////////////////////////////////////////////////////
+//
+/////////////////////////////////////////////////////////////////
+
+int main(int /*argc*/, char * /*argv*/[]) {
+
+  // SDL: initialize and create a window
+  SDL_Init(SDL_INIT_VIDEO);
+  const char *title = "CS 250: CameraRender2D Test";
+  int width = 600,
+      height = 600;
+  SDL_Window *window = SDL_CreateWindow(title,SDL_WINDOWPOS_UNDEFINED,
+                                        SDL_WINDOWPOS_UNDEFINED,width,height,
+                                        SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
+  SDL_GLContext context = SDL_GL_CreateContext(window);
+
+  // GLEW: get function bindings (if possible)
+  glewInit();
+  if (!GLEW_VERSION_2_0) {
+    cout << "needs OpenGL version 2.0 or better" << endl;
+    return -1;
+  }
+
+  // animation loop
+  try {
+    bool done = false;
+    Client *client = new Client();
+    Uint32 ticks_last = SDL_GetTicks();
+    while (!done) {
+      SDL_Event event;
+      while (SDL_PollEvent(&event)) {
+        switch (event.type) {
+          case SDL_QUIT:
+            done = true;
+            break;
+          case SDL_KEYDOWN:
+            if (event.key.keysym.sym == SDLK_ESCAPE)
+              done = true;
+            else
+              client->keypress(event.key.keysym.sym);
+            break;
+          case SDL_WINDOWEVENT:
+            if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+              client->resize(event.window.data1,event.window.data2);
+            break;
+        }
+      }
+      Uint32 ticks = SDL_GetTicks();
+      float dt = 0.001f*(ticks - ticks_last);
+      ticks_last = ticks;
+      client->draw(dt);
+      SDL_GL_SwapWindow(window);
+    }
+    delete client;
+  }
+
+  catch (exception &e) {
+    cout << e.what() << endl;
+  }
+
+  SDL_GL_DeleteContext(context);
+  SDL_Quit();
+  return 0;
+}
+
+
+
+
+================================================
+FILE: project/CubeMesh.cpp
+================================================
+#include "CubeMesh.h"
+
+const Point CubeMesh::vertices[8] = 
+{
+	Point(-1,-1,-1), //0
+	Point(1,-1,-1),  //1
+	Point(1,-1,1),   //2
+	Point(-1,-1,1),  //3
+	Point(-1,1,-1),  //4
+	Point(1,1,-1),   //5
+	Point(1,1,1),    //6
+	Point(-1,1,1)    //7
+};
+const CubeMesh::Face CubeMesh::faces[12]= 
+{
+	{0,1,2}, {0,2,3}, //bottom
+	{4,7,6}, {6,5,4}, //top
+	{7,3,2}, {2,6,7}, //front
+	{6,2,1}, {1,5,6}, //right
+	{5,1,0}, {0,4,5}, //back
+	{4,0,3}, {3,7,4}  //left
+};
+const CubeMesh::Edge CubeMesh::edges[12]=
+{
+	{0,1}, {1,2}, {2,3}, {3,0}, //bottom
+	{4,5}, {5,6}, {6,7}, {7,4}, //top
+	{0,4}, {1,5}, {2,6}, {3,7}  //verticals
+};
+
+
+int CubeMesh::VertexCount(void)
+{
+	return 8;
+}
+
+Point CubeMesh::GetVertex(int i)
+{
+	return vertices[i];
+}
+
+Vector CubeMesh::Dimensions(void)
+{
+	float max_x = vertices[0].x;
+	float min_x = vertices[0].x;
+	float max_y = vertices[0].y;
+	float min_y = vertices[0].y;
+	float max_z = vertices[0].z;
+	float min_z = vertices[0].z;
+	for (Point v : vertices)
+	{
+		if (max_x < v.x) max_x = v.x;
+		if (min_x > v.x) min_x = v.x;
+		if (max_y < v.y) max_y = v.y;
+		if (min_y > v.y) min_y = v.y;
+		if (max_z < v.z) max_z = v.z;
+		if (min_z > v.z) min_z = v.z;
+	}
+	float delta_x = max_x - min_x;
+	float delta_y = max_y - min_y;
+	float delta_z = max_z - min_z;
+	return Vector(delta_x,delta_y,delta_z);
+}
+
+Point CubeMesh::Center(void)
+{
+	float sum_x = 0.0f;
+	float sum_y = 0.0f;
+	float sum_z = 0.0f;
+	for(Point v : vertices)
+	{
+		sum_x += v.x;
+		sum_y += v.y;
+		sum_z += v.z;
+	}
+	return Point(sum_x/VertexCount(), sum_y/VertexCount(), sum_z/VertexCount());
+}
+
+int CubeMesh::FaceCount(void)
+{
+	return 12;
+}
+
+CubeMesh::Face CubeMesh::GetFace(int i)
+{
+	return faces[i];
+}
+
+int CubeMesh::EdgeCount(void)
+{
+	return 12;
+}
+
+CubeMesh::Edge CubeMesh::GetEdge(int i)
+{
+	return edges[i];
+}
+
+
+
+================================================
+FILE: project/CubeMesh.h
+================================================
+// CubeMesh.h
+// -- standard cube
+// cs250 5/15
+
+#ifndef CS250_CUBEMESH_H
+#define CS250_CUBEMESH_H
+
+#include "Mesh.h"
+
+class CubeMesh : public Mesh {
+  public:
+    int VertexCount(void) override;
+    Point GetVertex(int i) override;
+    Vector Dimensions(void) override;
+    Point Center(void) override;
+    int FaceCount(void) override;
+    Face GetFace(int i) override;
+    int EdgeCount(void) override;
+    Edge GetEdge(int i) override;
+  private:
+    static const Point vertices[8];
+    static const Face faces[12];
+    static const Edge edges[12];
+};
+
+#endif
+
+
+
+
+================================================
+FILE: project/CubeRenderDemo.cpp
+================================================
+// CubeRenderDemo.cpp
+// -- multiple cubes, multiple renderers
+// cs250 5/17
+
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <cstdlib>
+#include <cmath>
+#include <SDL2/SDL.h>
+#include <GL/glew.h>
+#include <GL/gl.h>
+#include "CubeMesh.h"
+#include "Render.h"
+using namespace std;
+
+
+const float PI = 4.0f * atan(1.0f);
+const Point O(0,0,0);
+const Vector EZ(0,0,1);
+const Vector GRAY(0.95f,0.95f,0.95f),
+             RED(1,0,0),
+             BLUE(0,0,1);
+
+
+class Client {
+  public:
+    Client(void);
+    ~Client(void);
+    void draw(float dt);
+    void resize(int W, int H);
+  private:
+    CubeMesh cube;
+    float cube1_rot_rate,
+          cube2_rot_rate;
+    Vector cube1_rot_axis,
+           cube2_rot_axis;
+    Point cube1_center,
+          cube2_center;
+    Render *render1,
+           *render2;
+    Matrix PersProj;
+    float time;
+    vector<Point> world_verts;
+    vector<Hcoord> clip_verts;
+};
+
+
+Client::Client(void) {
+  render1 = new Render();
+  render2 = new Render();
+
+  PersProj.row[0] = Hcoord(1.2f,0,0,0);
+  PersProj.row[1] = Hcoord(0,1.2f,0,0);
+  PersProj.row[2] = Hcoord(0,0,-10.1f/9.9f,-2/9.9f);
+  PersProj.row[3] = Hcoord(0,0,-1,0);
+
+  cube1_rot_rate = 2*PI/4.1f;
+  cube1_rot_axis = normalize(Vector(1,1,1));
+  cube1_center = Point(0.5f,0,-2);
+  cube2_rot_rate = 2*PI/9.3f;
+  cube2_rot_axis = normalize(Vector(2,-1,-1));
+  cube2_center = Point(-0.5f,0,-2);
+
+  time = 0;
+}
+
+
+Client::~Client(void) {
+  delete render2;
+  delete render1;
+}
+
+
+void Client::draw(float dt) {
+  render1->ClearBuffers(GRAY);
+
+  Affine M1 =  translate(cube1_center-O)
+               * rotate(acos(cube1_rot_axis.z),cross(EZ,cube1_rot_axis))
+               * rotate(cube1_rot_rate*time,EZ)
+               * scale(0.8f,0.8f,0.05f),
+         M2 = translate(cube2_center-O)
+              * rotate(acos(cube2_rot_axis.z),cross(EZ,cube2_rot_axis))
+               * rotate(cube2_rot_rate*time,EZ)
+               * scale(0.8f,0.8f,0.05f);
+
+  Affine M[2] = { M1, M2 };
+  Render *render[2] = { render1, render2 };
+  Vector color[2] = { RED, BLUE };
+  for (int n=0; n < 2; ++n) {
+    world_verts.clear();
+    clip_verts.clear();
+    for (int i=0; i < cube.VertexCount(); ++i) {
+      world_verts.push_back(M[n]*cube.GetVertex(i));
+      clip_verts.push_back(PersProj*world_verts[i]);
+    }
+
+    for (int i=0; i < cube.FaceCount(); ++i) {
+      const Mesh::Face &f = cube.GetFace(i);
+      const Point &P = world_verts[f.index1],
+                  &Q = world_verts[f.index2],
+                  &R = world_verts[f.index3];
+      Vector m = cross(Q-P,R-P);
+      if (dot(m,O-P) > 0) {
+        const Vector L(-0.5f,0,2);
+        float mu = abs(dot(m,L))/(abs(m)*abs(L));
+        render[n]->SetColor(mu*color[n]);
+        render[n]->FillTriangle(clip_verts[f.index1],
+                                clip_verts[f.index2],
+                                clip_verts[f.index3]);
+      }
+    }
+  }
+
+  time += dt;
+}
+
+
+void Client::resize(int W, int H) {
+  int D = min(W,H);
+  glViewport(0,0,D,D);
+}
+
+
+/////////////////////////////////////////////////////////////////
+//
+/////////////////////////////////////////////////////////////////
+
+int main(int /*argc*/, char * /*argv*/[]) {
+
+  // SDL: initialize and create a window
+  SDL_Init(SDL_INIT_VIDEO);
+  const char *title = "CS 250: Cube+Render Demo";
+  int width = 600,
+      height = 600;
+  SDL_Window *window = SDL_CreateWindow(title,SDL_WINDOWPOS_UNDEFINED,
+                                        SDL_WINDOWPOS_UNDEFINED,width,height,
+                                        SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
+  SDL_GLContext context = SDL_GL_CreateContext(window);
+
+  // GLEW: get function bindings (if possible)
+  GLenum value = glewInit();
+  if (value != GLEW_OK) {
+    cout << glewGetErrorString(value) << endl;
+    SDL_GL_DeleteContext(context);
+    SDL_Quit();
+    return -1;
+  }
+
+  // animation loop
+  try {
+    Client *client = new Client();
+    Uint32 ticks_last = SDL_GetTicks();
+    bool done = false;
+    while (!done) {
+      SDL_Event event;
+      while (SDL_PollEvent(&event)) {
+        switch (event.type) {
+          case SDL_QUIT:
+            done = true;
+            break;
+          case SDL_KEYDOWN:
+            if (event.key.keysym.sym == SDLK_ESCAPE)
+              done = true;
+            break;
+          case SDL_WINDOWEVENT:
+            if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+              client->resize(event.window.data1,event.window.data2);
+            break;
+        }
+      }
+      Uint32 ticks = SDL_GetTicks();
+      float dt = 0.001f*(ticks - ticks_last);
+      ticks_last = ticks;
+      client->draw(dt);
+      SDL_GL_SwapWindow(window);
+    }
+
+    delete client;
+  }  
+
+  catch (exception &e) {
+    cout << e.what() << endl;
+  }
+
+  SDL_GL_DeleteContext(context);
+  SDL_Quit();
+  return 0;
+}
+
+
+
+
+================================================
+FILE: project/CubeTest.cpp
+================================================
+// CubeTest.cpp
+// -- display a rotating cube (uses CubeMesh)
+// cs200 5/17
+//
+// To compile/link using Visual Studio Command Prompt:
+//     cl /EHsc CubeTest.cpp Affine.lib CubeMesh.cpp opengl32.lib
+//     glew32.lib SDL2.lib SDL2main.lib /link /subsystem:console
+// To compile under Linux:
+//     g++ CubeTest.cpp Affine.cpp CubeMesh.cpp -lGL -lGLEW -lSDL2
+
+
+#include <iostream>
+#include <algorithm>
+#include <cstdlib>
+#include <ctime>
+#include <SDL2/SDL.h>
+#include <GL/glew.h>
+#include <GL/gl.h>
+#include "CubeMesh.h"
+using namespace std;
+
+
+
+const float PI = 4.0f*atan(1.0f);
+const Point O(0,0,0);
+const Vector EZ(0,0,1);
+
+
+namespace {
+  float frand(float a=0, float b=1) {
+    return a + (b-a)*float(rand())/float(RAND_MAX);
+  }
+}
+
+
+class Client {
+  public:
+    Client(void);
+    ~Client(void);
+    void draw(float dt);
+    void keypress(SDL_Keycode kc);
+    void resize(int W, int H);
+  private:
+    CubeMesh cube;
+    Point cube_center;
+    float cube_scale,
+          cube_rot_rate;
+    Vector cube_rot_axis;
+    float time;
+    bool draw_solid;
+    Affine ObjToWorld;
+    Matrix PersProj;
+    GLint program[2],
+          aposition[2],
+          anormal,
+          utransform[2],
+          uprojection[2];
+    GLuint buffers[4];
+};
+
+
+Client::Client(void) {
+  // compile and link wire frame shader
+  const char *fragment_shader_text_wire =
+    "#version 130\n\
+     out vec4 frag_color;\
+     void main(void) {\
+       frag_color = vec4(0.5,0,0.5,1);\
+     }";
+  GLuint fshader_wire = glCreateShader(GL_FRAGMENT_SHADER);
+  glShaderSource(fshader_wire,1,&fragment_shader_text_wire,0);
+  glCompileShader(fshader_wire);
+
+  const char *vertex_shader_text_wire =
+    "#version 130\n\
+     attribute vec4 position;\
+     uniform mat4 transform;\
+     uniform mat4 projection;\
+     void main(void) {\
+       gl_Position = projection * transform * position;\
+     }";
+  GLuint vshader_wire = glCreateShader(GL_VERTEX_SHADER);
+  glShaderSource(vshader_wire,1,&vertex_shader_text_wire,0);
+  glCompileShader(vshader_wire);
+
+  program[0] = glCreateProgram();
+  glAttachShader(program[0],fshader_wire);
+  glAttachShader(program[0],vshader_wire);
+  glLinkProgram(program[0]);
+
+  // compile and link solid shader program
+  const char *fragment_shader_text_solid =
+    "#version 130\n\
+     in vec4 vcolor;\
+     out vec4 frag_color;\
+     void main(void) {\
+       frag_color = vcolor;\
+     }";
+  GLuint fshader_solid = glCreateShader(GL_FRAGMENT_SHADER);
+  glShaderSource(fshader_solid,1,&fragment_shader_text_solid,0);
+  glCompileShader(fshader_solid);
+
+  const char *vertex_shader_text_solid =
+    "#version 130\n\
+     attribute vec4 position;\
+     attribute vec4 normal;\
+     uniform mat4 transform;\
+     uniform mat4 projection;\
+     out vec4 vcolor;\
+     void main() {\
+       vec4 P = transform * position;\
+       gl_Position = projection * P;\
+       vec4 m = normalize(transform * normal);\
+       float value = max(0.0,m.z);\
+       vcolor = vec4(value,0,value,1);\
+     }";
+  GLuint vshader_solid = glCreateShader(GL_VERTEX_SHADER);
+  glShaderSource(vshader_solid,1,&vertex_shader_text_solid,0);
+  glCompileShader(vshader_solid);
+
+  program[1] = glCreateProgram();
+  glAttachShader(program[1],fshader_solid);
+  glAttachShader(program[1],vshader_solid);
+  glLinkProgram(program[1]);
+
+  // shader parameter locations
+  for (int i=0; i < 2; ++i) {
+    aposition[i] = glGetAttribLocation(program[i],"position");
+    utransform[i] = glGetUniformLocation(program[i],"transform");
+    uprojection[i] = glGetUniformLocation(program[i],"projection");
+  }
+  anormal = glGetAttribLocation(program[1],"normal");
+
+  glEnable(GL_DEPTH_TEST);
+
+  glGenBuffers(4,buffers);
+
+  // vertex buffer for wire frame
+  int count = cube.VertexCount();
+  Hcoord *htemp = new Hcoord[count];
+  for (int i=0; i < cube.VertexCount(); ++i)
+    htemp[i] = cube.GetVertex(i);
+  glBindBuffer(GL_ARRAY_BUFFER,buffers[0]);
+  glBufferData(GL_ARRAY_BUFFER,count*sizeof(Hcoord),htemp,GL_STATIC_DRAW);
+  delete[] htemp;
+
+  // edge buffer for wire frame
+  count = cube.EdgeCount();
+  Mesh::Edge *etemp = new Mesh::Edge[count];
+  for (int i=0; i < cube.EdgeCount(); ++i)
+    etemp[i] = cube.GetEdge(i);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,buffers[1]);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER,count*sizeof(Mesh::Edge),etemp,GL_STATIC_DRAW);
+  delete[] etemp;
+
+  // vertex buffer for solid
+  // -- flat shading, so need do this on a per face basis
+  count = 3 * cube.FaceCount();
+  htemp = new Hcoord[count];
+  for (int i=0; i < cube.FaceCount(); ++i) {
+    const Mesh::Face &f = cube.GetFace(i);
+    htemp[3*i+0] = cube.GetVertex(f.index1);
+    htemp[3*i+1] = cube.GetVertex(f.index2);
+    htemp[3*i+2] = cube.GetVertex(f.index3);
+  }
+  glBindBuffer(GL_ARRAY_BUFFER,buffers[2]);
+  glBufferData(GL_ARRAY_BUFFER,count*sizeof(Hcoord),htemp,GL_STATIC_DRAW);
+
+  // normal buffer for solid
+  for (int i=0; i < cube.FaceCount(); ++i) {
+    const Mesh::Face &f = cube.GetFace(i);
+    const Point &P = cube.GetVertex(f.index1),
+                &Q = cube.GetVertex(f.index2),
+                &R = cube.GetVertex(f.index3);
+    Vector m = cross(Q-P,R-P);
+    for (int j=0; j < 3; ++j)
+      htemp[3*i+j] = m;
+  }
+  glBindBuffer(GL_ARRAY_BUFFER,buffers[3]);
+  glBufferData(GL_ARRAY_BUFFER,count*sizeof(Hcoord),htemp,GL_STATIC_DRAW);
+  delete[] htemp;
+
+  // cube parameters
+  cube_center = Point(0,0,-2.5f);
+  cube_scale = 1.4f;
+  cube_rot_rate = 2*PI/10.0f;
+  cube_rot_axis = normalize(Vector(frand(-1,1),frand(-1,1),frand(-1,1)));
+  draw_solid = false;
+  time = 0;
+
+  // perspective projection
+  PersProj.row[0] = Hcoord(1.4f,0,0,0);
+  PersProj.row[1] = Hcoord(0,1.4f,0,0);
+  PersProj.row[2] = Hcoord(0,0,-10.1f/9.9f,-2/9.9f);
+  PersProj.row[3] = Hcoord(0,0,-1,0);
+}
+
+
+Client::~Client(void) {
+  glDeleteBuffers(4,buffers);
+  glUseProgram(0);
+  for (int i=0; i < 2; ++i) {
+    GLuint shaders[2];
+    GLsizei count;
+    glGetAttachedShaders(program[i],2,&count,shaders);
+    for (int j=0; j < count; ++j)
+      glDeleteShader(shaders[j]);
+    glDeleteProgram(program[i]);
+  }
+}
+
+
+void Client::draw(float dt) {
+  // clear frame buffer and z-buffer
+  glClearColor(0.95f,0.95f,0.95f,1);
+  glClearDepth(1);
+  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+  // modeling transform update
+  ObjToWorld = translate(cube_center-O)
+                      * rotate(acos(dot(EZ,cube_rot_axis)),
+                               cross(EZ,cube_rot_axis))
+                      * rotate(cube_rot_rate*time,EZ)
+                      * scale(0.5f*cube_scale);
+
+  int index = draw_solid ? 1 : 0;
+  glUseProgram(program[index]);
+  glEnableVertexAttribArray(aposition[index]);
+  glUniformMatrix4fv(utransform[index],1,true,(float*)&ObjToWorld);
+  glUniformMatrix4fv(uprojection[index],1,true,(float*)&PersProj);
+
+  if (draw_solid) {
+    glBindBuffer(GL_ARRAY_BUFFER,buffers[2]);
+    glVertexAttribPointer(aposition[1],4,GL_FLOAT,false,0,0);
+    glEnableVertexAttribArray(anormal);
+    glBindBuffer(GL_ARRAY_BUFFER,buffers[3]);
+    glVertexAttribPointer(anormal,4,GL_FLOAT,false,0,0);
+    glDrawArrays(GL_TRIANGLES,0,3*cube.FaceCount());
+  }
+
+  else {
+    glLineWidth(2);
+    glBindBuffer(GL_ARRAY_BUFFER,buffers[0]);
+    glVertexAttribPointer(aposition[0],4,GL_FLOAT,false,0,0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,buffers[1]);
+    glDrawElements(GL_LINES,2*cube.EdgeCount(),GL_UNSIGNED_INT,0);
+  }
+
+  time += dt;
+}
+
+
+void Client::keypress(SDL_Keycode kc) {
+  if (kc == SDLK_SPACE)
+    draw_solid = !draw_solid;
+  else if (kc == SDLK_r)
+    cube_rot_axis = normalize(Vector(frand(-1,1),frand(-1,1),frand(-1,1)));
+}
+
+
+void Client::resize(int W, int H) {
+  int D = min(W,H);
+  glViewport(0,0,D,D);
+}
+
+
+/////////////////////////////////////////////////////////////////
+//
+/////////////////////////////////////////////////////////////////
+
+int main(int /*argc*/, char * /*argv*/[]) {
+  srand(unsigned(time(0)));
+
+  // SDL: initialize and create a window
+  SDL_Init(SDL_INIT_VIDEO);
+  const char *title = "CS 250: CubeMesh Test";
+  int width = 600,
+      height = 600;
+  SDL_Window *window = SDL_CreateWindow(title,SDL_WINDOWPOS_UNDEFINED,
+                                        SDL_WINDOWPOS_UNDEFINED,width,height,
+                                        SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
+  SDL_GLContext context = SDL_GL_CreateContext(window);
+
+  // GLEW: get function bindings (if possible)
+  GLenum value = glewInit();
+  if (value != GLEW_OK) {
+    cout << glewGetErrorString(value) << endl;
+    SDL_GL_DeleteContext(context);
+    SDL_Quit();
+    return -1;
+  }
+
+  // animation loop
+  bool done = false;
+  Client *client = new Client();
+  Uint32 ticks_last = SDL_GetTicks();
+  while (!done) {
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+      switch (event.type) {
+        case SDL_QUIT:
+          done = true;
+          break;
+        case SDL_KEYDOWN:
+          if (event.key.keysym.sym == SDLK_ESCAPE)
+            done = true;
+          else
+            client->keypress(event.key.keysym.sym);
+          break;
+        case SDL_WINDOWEVENT:
+          if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+            client->resize(event.window.data1,event.window.data2);
+          break;
+      }
+    }
+    Uint32 ticks = SDL_GetTicks();
+    float dt = 0.001f*(ticks - ticks_last);
+    ticks_last = ticks;
+    client->draw(dt);
+    SDL_GL_SwapWindow(window);
+  }
+
+  // clean up
+  delete client;
+  SDL_GL_DeleteContext(context);
+  SDL_Quit();
+  return 0;
+}
+
+
+
+
+================================================
+FILE: project/FrustumMesh.cpp
+================================================
+/******************************************************************************
+ * File: FrustumMesh.cpp
+ * Author: Taekyung Ho
+ * Course: CS250
+ * Assignment: Camera Frustum Programming Assignment
+ * Description: Defines a mesh representing the viewing frustum of a
+ * canonically oriented camera, including COP and near/far planes.
+ *****************************************************************************/
+#include "FrustumMesh.h"
+#include <cmath>
+
+namespace {
+	const Point CenterOfProjection = Point(0.0f, 0.0f, 0.0f);
+}
+
+/**
+ * Indices for frustum faces.
+ * Triangles are defined for near, top, left, right, bottom, and far planes.
+ */
+const FrustumMesh::Face FrustumMesh::faces[12] =
+{
+	{3,2,4}, {2,1,4}, // near
+	{7,3,4}, {7,4,8}, // top
+	{7,2,3}, {7,6,2}, // left
+	{1,8,4}, {1,5,8}, // right
+	{2,6,1}, {6,5,1}, // bottom
+	{8,5,7}, {5,6,7}  // far
+};
+
+/**
+ * Indices for frustum edges.
+ * Includes edges connecting to the COP for the wireframe view.
+ */
+const FrustumMesh::Edge FrustumMesh::edges[16] =
+{
+	{0,1}, {0,2}, {0,3}, {0,4}, // Edges from COP to near plane
+	{1,2}, {2,3}, {3,4}, {4,1}, // Near plane boundary
+	{5,6}, {6,7}, {7,8}, {8,5}, // Far plane boundary
+	{1,5}, {2,6}, {3,7}, {4,8}  // Connectivity between planes
+};
+
+/**
+ * Constructor: Computes vertex positions based on frustum parameters.
+ */
+FrustumMesh::FrustumMesh(float fov, float a, float n, float f)
+{
+	vertices[0] = CenterOfProjection;
+
+	// Calculate half-width and half-height at near and far distances
+	float fov_tan_value = tan(fov * 0.5f);
+	float near_width_half = n * fov_tan_value;
+	float near_height_half = near_width_half / a;
+	float far_width_half = f * fov_tan_value;
+	float far_height_half = far_width_half / a;
+
+	// Define 8 vertices forming the near and far clipping planes
+	vertices[1] = Point(near_width_half, -near_height_half, -n);
+	vertices[2] = Point(-near_width_half, -near_height_half, -n);
+	vertices[3] = Point(-near_width_half, near_height_half, -n);
+	vertices[4] = Point(near_width_half, near_height_half, -n);
+	vertices[5] = Point(far_width_half, -far_height_half, -f);
+	vertices[6] = Point(-far_width_half, -far_height_half, -f);
+	vertices[7] = Point(-far_width_half, far_height_half, -f);
+	vertices[8] = Point(far_width_half, far_height_half, -f);
+
+	// Determine the bounding box dimensions
+	float max_x = vertices[0].x, min_x = vertices[0].x;
+	float max_y = vertices[0].y, min_y = vertices[0].y;
+	float max_z = vertices[0].z, min_z = vertices[0].z;
+
+	for (const Point& v : vertices)
+	{
+		if (max_x < v.x) max_x = v.x; if (min_x > v.x) min_x = v.x;
+		if (max_y < v.y) max_y = v.y; if (min_y > v.y) min_y = v.y;
+		if (max_z < v.z) max_z = v.z; if (min_z > v.z) min_z = v.z;
+	}
+	dimensions = Vector(max_x - min_x, max_y - min_y, max_z - min_z);
+
+	// Compute the center of the vertices
+	float sum_x = 0.0f, sum_y = 0.0f, sum_z = 0.0f;
+	for (const Point& v : vertices)
+	{
+		sum_x += v.x; sum_y += v.y; sum_z += v.z;
+	}
+	center = Point(sum_x / VertexCount(), sum_y / VertexCount(), sum_z / VertexCount());
+}
+
+int FrustumMesh::VertexCount(void) { return 9; }
+Point FrustumMesh::GetVertex(int i) { return vertices[i]; }
+Vector FrustumMesh::Dimensions(void) { return dimensions; }
+Point FrustumMesh::Center(void) { return center; }
+int FrustumMesh::FaceCount(void) { return 12; }
+FrustumMesh::Face FrustumMesh::GetFace(int i) { return faces[i]; }
+int FrustumMesh::EdgeCount(void) { return 16; }
+FrustumMesh::Edge FrustumMesh::GetEdge(int i) { return edges[i]; }
+
+
+================================================
+FILE: project/FrustumMesh.h
+================================================
+// FrustumMesh.h
+// -- 3D mesh for a view frustum
+// cs250 5/15
+
+#ifndef CS250_FRUSTUMMESH_H
+#define CS250_FRUSTUMMESH_H
+
+#include "Mesh.h"
+
+
+class FrustumMesh : public Mesh {
+  public:
+    FrustumMesh(float fov, float a, float n, float f);
+    int VertexCount(void);
+    Point GetVertex(int i);
+    Vector Dimensions(void);
+    Point Center(void);
+    int FaceCount(void);
+    Face GetFace(int i);
+    int EdgeCount(void);
+    Edge GetEdge(int i);
+  private:
+    Point vertices[9];
+    Point center;
+    Vector dimensions;
+    static const Edge edges[16];
+    static const Face faces[12];
+};
+
+
+#endif
+
+
+
+
+================================================
+FILE: project/main.cpp
+================================================
+// Headerphile.com OpenGL Tutorial part 1
+// A Hello World in the world of OpenGL ( creating a simple windonw and setting
+// background color ) Source code is an C++ adaption / simplicication of :
+// https://www.opengl.org/wiki/Tutorial1:_Creating_a_Cross_Platform_OpenGL_3.2_Context_in_SDL_(C_/_SDL)
+// Compile : clang++ main.cpp -lGL -lSDL2 -std=c++11 -o Test
+
+// C++ Headers
+#include <GL/glew.h>
+#include <SDL2/SDL.h>
+#include <iostream>
+#include <string>
+
+std::string programName = "SDL2 Glew OpenGL";
+
+// Our SDL_Window ( just like with SDL2 wihout OpenGL)
+SDL_Window* mainWindow;
+
+// Our opengl context handle
+SDL_GLContext mainContext;
+
+bool SetOpenGLAttributes();
+void PrintSDL_GL_Attributes();
+void CheckSDLError(int line);
+bool RunGameAndContinue();
+void Cleanup();
+
+
+bool Init()
+{
+    // Initialize SDL's Video subsystem
+    if (SDL_Init(SDL_INIT_VIDEO) < 0)
+    {
+        std::cout << "Failed to init SDL\n";
+        return false;
+    }
+
+    // Create our window centered at 512x512 resolution
+    mainWindow =
+        SDL_CreateWindow(programName.c_str(), SDL_WINDOWPOS_CENTERED,
+                         SDL_WINDOWPOS_CENTERED, 512, 512, SDL_WINDOW_OPENGL);
+
+    // Check that everything worked out okay
+    if (!mainWindow)
+    {
+        std::cout << "Unable to create window\n";
+        CheckSDLError(__LINE__);
+        return false;
+    }
+
+    // Create our opengl context and attach it to our window
+    mainContext = SDL_GL_CreateContext(mainWindow);
+
+    SetOpenGLAttributes();
+
+    // This makes our buffer swap syncronized with the monitor's vertical refresh
+    SDL_GL_SetSwapInterval(1);
+
+    // Init GLEW
+    glewExperimental = GL_TRUE;
+    glewInit();
+
+    PrintSDL_GL_Attributes();
+
+    return true;
+}
+
+bool SetOpenGLAttributes()
+{
+    // Set our OpenGL version.
+    // SDL_GL_CONTEXT_CORE gives us only the newer version, deprecated functions are
+    // disabled
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+
+    // Most video cards should be able to run 3.3
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+
+    // Turn on double buffering with a 24bit Z buffer.
+    // You may need to change this to 16 or 32 for your system
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+
+    return true;
+}
+
+int main(int /*argc*/, char* /*argv*/ [])
+{
+    if (!Init())
+        return -1;
+
+    // Clear our buffer with a black background
+    // This is the same as :
+    //      SDL_SetRenderDrawColor(&renderer, 255, 0, 0, 255);
+    //      SDL_RenderClear(&renderer);
+    //
+    glClearColor(0.0, 0.0, 0.0, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT);
+    SDL_GL_SwapWindow(mainWindow);
+    auto loop = true;
+    while(loop)
+        loop = RunGameAndContinue();
+    Cleanup();
+
+    return 0;
+}
+
+bool RunGameAndContinue()
+{
+    SDL_Event event;
+    while (SDL_PollEvent(&event))
+    {
+        if (event.type == SDL_QUIT)
+            return false;
+
+        if (event.type == SDL_KEYDOWN)
+        {
+            switch (event.key.keysym.sym)
+            {
+                case SDLK_ESCAPE:
+                    return false;
+                    break;
+                case SDLK_r:
+                    // Cover with red and update
+                    glClearColor(1.0, 0.0, 0.0, 1.0);
+                    glClear(GL_COLOR_BUFFER_BIT);
+                    SDL_GL_SwapWindow(mainWindow);
+                    break;
+                case SDLK_g:
+                    // Cover with green and update
+                    glClearColor(0.0, 1.0, 0.0, 1.0);
+                    glClear(GL_COLOR_BUFFER_BIT);
+                    SDL_GL_SwapWindow(mainWindow);
+                    break;
+                case SDLK_b:
+                    // Cover with blue and update
+                    glClearColor(0.0, 0.0, 1.0, 1.0);
+                    glClear(GL_COLOR_BUFFER_BIT);
+                    SDL_GL_SwapWindow(mainWindow);
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+    return true;
+}
+
+void Cleanup()
+{
+    // Delete our OpengL context
+    SDL_GL_DeleteContext(mainContext);
+
+    // Destroy our window
+    SDL_DestroyWindow(mainWindow);
+
+    // Shutdown SDL 2
+    SDL_Quit();
+}
+
+void CheckSDLError(int line = -1)
+{
+    std::string error = SDL_GetError();
+
+    if (error != "")
+    {
+        std::cout << "SLD Error : " << error << std::endl;
+
+        if (line != -1)
+            std::cout << "\nLine : " << line << std::endl;
+
+        SDL_ClearError();
+    }
+}
+
+void PrintSDL_GL_Attributes()
+{
+    int value = 0;
+    SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &value);
+    std::cout << "SDL_GL_CONTEXT_MAJOR_VERSION : " << value << std::endl;
+
+    SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &value);
+    std::cout << "SDL_GL_CONTEXT_MINOR_VERSION: " << value << std::endl;
+}
+
+
+
+================================================
+FILE: project/Mesh.h
+================================================
+// Mesh.h
+// -- 3D triangular mesh interface
+// cs250 9/16
+
+#ifndef CS250_MESH_H
+#define CS250_MESH_H
+
+#include "Affine.h"
+
+
+struct Mesh {
+
+  struct Face {
+    int index1, index2, index3;
+    Face(int i=-1, int j=-1, int k=-1)
+        : index1(i), index2(j), index3(k) {}
+  };
+
+  struct Edge {
+    int index1, index2;
+    Edge(int i=-1, int j=-1)
+        : index1(i), index2(j) {}
+  };
+
+  virtual ~Mesh(void) {}
+  virtual int VertexCount(void) = 0;
+  virtual Point GetVertex(int i) = 0;
+  virtual Vector Dimensions(void) = 0;
+  virtual Point Center(void) = 0;
+  virtual int FaceCount(void) = 0;
+  virtual Face GetFace(int i) = 0;
+  virtual int EdgeCount(void) = 0;
+  virtual Edge GetEdge(int i) = 0;
+
+};
+
+
+#endif
+
+
+
+
+================================================
+FILE: project/Projection.cpp
+================================================
+#include "Projection.h"
+
+Affine CameraToWorld(const Camera& cam)
+{
+	return Affine(cam.Right(),cam.Up(), cam.Back(), cam.Eye());
+}
+
+Affine WorldToCamera(const Camera& cam)
+{
+	Affine rotate_t = Affine(cam.Right(), cam.Up(), cam.Back(), Point(0.f, 0.f, 0.f));
+	Affine translate_neg = translate(-PointToVector(cam.Eye()));
+	float temp;
+
+	temp = rotate_t[0].y;
+	rotate_t[0].y = rotate_t[1].x;
+	rotate_t[1].x = temp;
+
+	temp = rotate_t[0].z;
+	rotate_t[0].z = rotate_t[2].x;
+	rotate_t[2].x = temp;
+
+	temp = rotate_t[1].z;
+	rotate_t[1].z = rotate_t[2].y;
+	rotate_t[2].y = temp;
+
+	return rotate_t*translate_neg;
+}
+
+Matrix CameraToNDC(const Camera& cam)
+{
+	Matrix proj_and_NDC;
+	float near = cam.NearDistance();
+	float far = cam.FarDistance();
+	float width = cam.ViewportGeometry().x;
+	float height = cam.ViewportGeometry().y;
+	float distance = cam.ViewportGeometry().z;
+	proj_and_NDC[0].x = 2 * distance / width;
+	proj_and_NDC[1].y = 2 * distance / height;
+	proj_and_NDC[2].z = (far + near) / (near - far);
+	proj_and_NDC[2].w = 2 * far * near / (near - far);
+	proj_and_NDC[3].z = -1;
+	return proj_and_NDC;
+}
+
+
+
+================================================
+FILE: project/Projection.h
+================================================
+// Projection.h
+// -- world-to-camera, and camera-to-ndc transforms
+// cs250 5/15
+
+#ifndef CS250_PROJECTION_H
+#define CS250_PROJECTION_H
+
+#include "Camera.h"
+
+
+Affine CameraToWorld(const Camera& cam);
+Affine WorldToCamera(const Camera& cam);
+Matrix CameraToNDC(const Camera& cam);
+
+
+#endif
+
+
+
+
+================================================
+FILE: project/Render.cpp
+================================================
+// Render.cpp
+// jsh 1/17
+
+#include <stdexcept>
+#include <GL/glew.h>
+#include "Render.h"
+using namespace std;
+
+
+Render::Render(void) {
+  GLint value;
+  GLuint fshader = glCreateShader(GL_FRAGMENT_SHADER);
+  const char *fragment_shader_text =
+    "#version 130\n\
+     uniform vec3 color;\
+     out vec4 frag_color;\
+     void main(void) {\
+       frag_color = vec4(color,1);\
+     }";
+  glShaderSource(fshader,1,&fragment_shader_text,0);
+  glCompileShader(fshader);
+  glGetShaderiv(fshader,GL_COMPILE_STATUS,&value);
+  if (value == 0)
+    throw runtime_error("fragment shader failed to compile");
+
+  GLuint vshader = glCreateShader(GL_VERTEX_SHADER);
+  const char *vertex_shader_text =
+    "#version 130\n\
+     attribute vec4 position;\
+     void main() {\
+       gl_Position = position;\
+     }";
+  glShaderSource(vshader,1,&vertex_shader_text,0);
+  glCompileShader(vshader);
+  glGetShaderiv(vshader,GL_COMPILE_STATUS,&value);
+  if (value == 0)
+    throw runtime_error("vertex shader failed to compile");
+
+  program = glCreateProgram();
+  glAttachShader(program,fshader);
+  glAttachShader(program,vshader);
+  glLinkProgram(program);
+  glGetProgramiv(program,GL_LINK_STATUS,&value);
+  if (value == 0)
+    throw runtime_error("shader program failed to link");
+
+  ucolor = glGetUniformLocation(program,"color");
+  aposition = glGetAttribLocation(program,"position");
+  glEnableVertexAttribArray(aposition);
+
+  glEnable(GL_DEPTH_TEST);
+}
+
+
+Render::~Render(void) {
+  glUseProgram(0);
+  GLuint shaders[2];
+  GLsizei count;
+  glGetAttachedShaders(program,2,&count,shaders);
+  for (int i=0; i < count; ++i)
+    glDeleteShader(shaders[i]);
+  glDeleteProgram(program);
+}
+
+
+void Render::ClearBuffers(const Vector& c) {
+  glClearColor(c[0],c[1],c[2],1);
+  glClear(GL_COLOR_BUFFER_BIT);
+  glClearDepth(1);
+  glClear(GL_DEPTH_BUFFER_BIT);
+}
+
+
+void Render::SetColor(const Vector& c) {
+  glUseProgram(program);
+  glUniform3f(ucolor,c[0],c[1],c[2]);
+}
+  
+
+void Render::DrawLine(const Hcoord& P, const Hcoord& Q) {
+  glUseProgram(program);
+  GLuint vertex_buffer;
+  glGenBuffers(1,&vertex_buffer);
+  glBindBuffer(GL_ARRAY_BUFFER,vertex_buffer);
+  float vertices[8] = { P.x,P.y,P.z,P.w, Q.x,Q.y,Q.z,Q.w };
+  glBufferData(GL_ARRAY_BUFFER,sizeof(vertices),vertices,GL_STATIC_DRAW);
+  glVertexAttribPointer(aposition,4,GL_FLOAT,false,0,0);
+  glDrawArrays(GL_LINES,0,2);
+  glDeleteBuffers(1,&vertex_buffer);
+}
+
+
+void Render::FillTriangle(const Hcoord& P, const Hcoord& Q, const Hcoord& R) {
+  glUseProgram(program);
+  GLuint vertex_buffer;
+  glGenBuffers(1,&vertex_buffer);
+  glBindBuffer(GL_ARRAY_BUFFER,vertex_buffer);
+  float vertices[12] = { P.x,P.y,P.z,P.w, Q.x,Q.y,Q.z,Q.w, R.x,R.y,R.z,R.w };
+  glBufferData(GL_ARRAY_BUFFER,sizeof(vertices),vertices,GL_STATIC_DRAW);
+  glVertexAttribPointer(aposition,4,GL_FLOAT,false,0,0);
+  glDrawArrays(GL_TRIANGLES,0,3);
+  glDeleteBuffers(1,&vertex_buffer);
+}
+
+
+
+
+================================================
+FILE: project/Render.h
+================================================
+// Render.h
+// -- simple rendering using OpenGL
+// cs250 1/17
+
+#ifndef CS250_RENDER_H
+#define CS250_RENDER_H
+
+#include <GL/glew.h>
+#include <GL/gl.h>
+#include "Affine.h"
+
+
+class Render {
+  public:
+    Render(void);
+    ~Render(void);
+    void ClearBuffers(const Vector& c);
+    void SetColor(const Vector& c);
+    void DrawLine(const Hcoord& P, const Hcoord& Q);
+    void FillTriangle(const Hcoord& P, const Hcoord& Q, const Hcoord& R);
+  private:
+    GLint program;
+    GLint ucolor, aposition;
+};
+
+
+#endif
+
+
+
+
+================================================
+FILE: project/SimpleRender.cpp
+================================================
+/******************************************************************************
+ * File: SimpleRender.cpp
+ * Author: Taekyung Ho
+ * Course: CS250
+ * Assignment: Camera Frustum Programming Assignment
+ * Description: Implements the SimpleRender class to render 3D meshes as
+ * wireframes or solid objects with diffuse shading and backface
+ * culling using a fixed camera.
+ *****************************************************************************/
+#include "SimpleRender.h"
+
+namespace
+{
+	/**
+	 * Determines if a face is facing the camera.
+	 * Returns true if the dot product of the face normal and the vector to the
+	 * camera is positive.
+	 */
+	bool is_frontface(const Vector& v1, const Vector& v2)
+	{
+		return dot(v1, v2) > 0;
+	}
+
+	// The fixed center of projection as specified in the assignment 
+	const Point CenterOfProjection(0, 0, 5);
+}
+
+/**
+ * Constructor: Initializes the perspective projection matrix.
+ * The matrix is defined based on the center of projection E=(0,0,5)
+ * and projection plane z=-1/2.
+ */
+SimpleRender::SimpleRender(Render& r) : render(r)
+{
+	PersProj.row[0] = Hcoord(1, 0, 0, 0);
+	PersProj.row[1] = Hcoord(0, 1, 0, 0);
+	PersProj.row[2] = Hcoord(0, 0, 1 / 11.f, -5 / 11.f);
+	PersProj.row[3] = Hcoord(0, 0, -2 / 11.f, 10 / 11.f);
+}
+
+SimpleRender::~SimpleRender(void)
+{
+}
+
+/**
+ * Renders the mesh as a wireframe.
+ * Transforms vertices to world space, applies perspective projection,
+ * performs perspective divide, and draws edges.
+ */
+void SimpleRender::DisplayEdges(Mesh& m, const Affine& A, const Vector& color)
+{
+	render.SetColor(color);
+	int vertexCount = m.VertexCount();
+	std::vector<Point> vertices;
+	vertices.reserve(vertexCount);
+
+	// Combined Model-to-World and Projection matrix
+	Matrix M = PersProj * A;
+
+	for (int i = 0; i < vertexCount; i++)
+	{
+		Hcoord result = M * m.GetVertex(i);
+
+		// Explicit Perspective Divide 
+		float w = result.w;
+		result.x /= w;
+		result.y /= w;
+		result.z /= w;
+		result.w /= w;
+		vertices.push_back(Point(result.x, result.y, result.z));
+	}
+
+	// Draw lines for each edge defined in the mesh
+	int edgeCount = m.EdgeCount();
+	for (int i = 0; i < edgeCount; i++)
+	{
+		int index1 = m.GetEdge(i).index1;
+		int index2 = m.GetEdge(i).index2;
+		render.DrawLine(vertices[index1], vertices[index2]);
+	}
+}
+
+/**
+ * Renders the mesh as a solid with diffuse shading.
+ * Uses backface culling to only draw visible faces and calculates
+ * shading based on the light direction L=<0,0,1>
+ */
+void SimpleRender::DisplayFaces(Mesh& m, const Affine& A, const Vector& color)
+{
+	int vertexCount = m.VertexCount();
+	std::vector<Point> vertices;
+	vertices.reserve(vertexCount);
+
+	// Project vertices for rendering
+	Matrix M = PersProj * A;
+	for (int i = 0; i < vertexCount; i++)
+	{
+		Hcoord result = M * m.GetVertex(i);
+		float w = result.w;
+		result.x /= w;
+		result.y /= w;
+		result.z /= w;
+		result.w /= w;
+		vertices.push_back(Point(result.x, result.y, result.z));
+	}
+
+	int faceCount = m.FaceCount();
+	const Vector line_shines{ 0, 0, 1 }; // Light direction 
+
+	for (int i = 0; i < faceCount; i++)
+	{
+		int index1 = m.GetFace(i).index1;
+		int index2 = m.GetFace(i).index2;
+		int index3 = m.GetFace(i).index3;
+
+		// Calculate face normal in world space for backface culling and shading
+		const Point world_vertices[3] = { A * m.GetVertex(index1), A * m.GetVertex(index2), A * m.GetVertex(index3) };
+		Vector normal = cross(world_vertices[1] - world_vertices[0], world_vertices[2] - world_vertices[0]);
+
+		// Vector from a point on the face to the Center of Projection 
+		Vector PE = PointToVector(CenterOfProjection) - PointToVector(world_vertices[0]);
+
+		// Backface culling check 
+		if (is_frontface(normal, PE))
+		{
+			// Calculate diffuse shading coefficient mu
+			float diffuse = dot(line_shines, normal) / abs(normal);
+			diffuse = diffuse < 0 ? -diffuse : diffuse;
+
+			// Set the shaded color and fill the triangle
+			render.SetColor(Vector{ diffuse * color.x, diffuse * color.y, diffuse * color.z });
+			render.FillTriangle(vertices[index1], vertices[index2], vertices[index3]);
+		}
+	}
+}
+
+
+================================================
+FILE: project/SimpleRender.h
+================================================
+// SimpleRender.h
+// -- first attempt at 3D rendering (fixed camera, no depth buffering)
+// cs250 5/17
+
+#ifndef CS250_SIMPLERENDER_H
+#define CS250_SIMPLERENDER_H
+
+#include <vector>
+#include "Render.h"
+#include "Affine.h"
+#include "Mesh.h"
+
+
+class SimpleRender {
+  public:
+    SimpleRender(Render &r);
+    ~SimpleRender(void);
+    void DisplayEdges(Mesh& m, const Affine& A, const Vector& color);
+    void DisplayFaces(Mesh& m, const Affine& A, const Vector& color);
+  private:
+    Render &render;
+    Matrix PersProj;
+    //std::vector<Point> world_vertices;
+    //std::vector<Point> proj_vertices;
+};
+
+
+#endif
+
+
+
+
+================================================
+FILE: project/SimpleRenderTest.cpp
+================================================
+// SimpleRenderTest.cpp
+// -- test of simple rendering class
+// cs200 5/19
+//
+// Visual Studio command prompt:
+//   cl /EHsc SimpleRenderTest.cpp SimpleRender.cpp SnubDodecMesh.cpp
+//      Render.lib Affine.lib opengl32.lib glew32.lib SDL2.lib
+//      SDL2main.lib /link /subsystem:console
+// Linux command line:
+//   g++ SimpleRenderTest.cpp SimpleRender.cpp Render.cpp Affine.cpp\
+//       SnubDodecMesh.cpp -lGL -lGLEW -lSDL2
+
+#include <iostream>
+#include <algorithm>
+#include <cmath>
+#include <SDL2/SDL.h>
+#include <GL/glew.h>
+#include <GL/gl.h>
+#include "Render.h"
+#include "SimpleRender.h"
+#include "SnubDodecMesh.h"
+using namespace std;
+
+
+const Point O(0,0,0);
+const Vector EZ(0,0,1);
+const float PI = 4.0f * atan(1.0f);
+const Vector WHITE(1,1,1),
+             GREEN(0,1,0),
+             BLUE(0,0,1);
+
+
+class Client {
+  public:
+    Client(void);
+    ~Client(void);
+    void draw(double dt);
+    void keypress(SDL_Keycode kc);
+    void resize(int W, int H);
+  private:
+    SnubDodecMesh mesh;
+    Point mesh_center;
+    float mesh_scale,
+          mesh_rot_rate;
+    Vector mesh_rot_axis;
+    bool draw_solid;
+    Render *render;
+    SimpleRender *srender;
+    double time;
+};
+
+
+Client::Client(void) {
+  render = new Render();
+  srender = new SimpleRender(*render);
+  mesh_center = Point(0,0,-1);
+  mesh_scale = 2.0f;
+  mesh_rot_rate = 2*PI/10.0f;
+  mesh_rot_axis = normalize(Vector(1,1,1));
+  draw_solid = false;
+  time = 0;
+}
+
+
+Client::~Client(void) {
+  delete render;
+  delete srender;
+}
+
+
+void Client::draw(double dt) {
+  render->ClearBuffers(WHITE);
+
+  // modeling transformation
+  Affine obj2world = translate(mesh_center-O)
+                     * rotate(acos(mesh_rot_axis.z),cross(EZ,mesh_rot_axis))
+                     * rotate(mesh_rot_rate*static_cast<float>(time),EZ)
+                     * scale(mesh_scale/mesh.Dimensions().x)
+                     * translate(O-mesh.Center());
+
+  // draw figure
+  if (draw_solid)
+    srender->DisplayFaces(mesh,obj2world,GREEN);
+  else
+    srender->DisplayEdges(mesh,obj2world,BLUE);
+
+  time += dt;
+}
+
+
+void Client::resize(int W, int H) {
+  int D = min(W,H);
+  glViewport(0,0,D,D);
+}
+
+
+void Client::keypress(SDL_Keycode kc) {
+  if (kc == SDLK_SPACE)
+    draw_solid = !draw_solid;
+}
+
+
+/////////////////////////////////////////////////////////////////
+//
+/////////////////////////////////////////////////////////////////
+
+int main(int /*argc*/, char * /*argv*/[]) {
+
+  // SDL: initialize and create a window
+  SDL_Init(SDL_INIT_VIDEO);
+  const char *title = "CS 250: SimpleRender Test";
+  int width = 600,
+      height = 600;
+  SDL_Window *window = SDL_CreateWindow(title,SDL_WINDOWPOS_UNDEFINED,
+                                        SDL_WINDOWPOS_UNDEFINED,width,height,
+                                        SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
+  SDL_GLContext context = SDL_GL_CreateContext(window);
+
+  // GLEW: get function bindings (if possible)
+  glewInit();
+  if (!GLEW_VERSION_2_0) {
+    cout << "needs OpenGL version 2.0 or better" << endl;
+    return -1;
+  }
+
+  // animation loop
+  try {
+    Client *client = new Client();
+    bool done = false;
+    Uint32 ticks_last = SDL_GetTicks();
+    while (!done) {
+      SDL_Event event;
+      while (SDL_PollEvent(&event)) {
+        switch (event.type) {
+          case SDL_QUIT:
+            done = true;
+            break;
+          case SDL_KEYDOWN:
+            if (event.key.keysym.sym == SDLK_ESCAPE)
+              done = true;
+            else
+              client->keypress(event.key.keysym.sym);
+            break;
+          case SDL_WINDOWEVENT:
+            if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+              client->resize(event.window.data1,event.window.data2);
+            break;
+        }
+      }
+      Uint32 ticks = SDL_GetTicks();
+      double dt = 0.001*(ticks - ticks_last);
+      ticks_last = ticks;
+      client->draw(dt);
+      SDL_GL_SwapWindow(window);
+    }
+    delete client;
+  }
+
+  catch (exception &e) {
+    cout << e.what() << endl;
+  }
+
+  SDL_GL_DeleteContext(context);
+  SDL_Quit();
+  return 0;
+}
+
+
+
+
+================================================
+FILE: project/SnubDodecMesh.cpp
+================================================
+// SnubDodecMesh.cpp
+// cs250 1/15
+
+#include "SnubDodecMesh.h"
+
+
+Mesh::Face SnubDodecMesh::faces[116] = {
+  Face(48,32,45), Face(48,16,32), Face(48,0,16),  Face(54,20,47), 
+  Face(54,1,20),  Face(54,24,1),  Face(36,56,30), Face(36,22,56), 
+  Face(36,2,22),  Face(37,23,57), Face(37,29,23), Face(37,3,29),  
+  Face(49,41,21), Face(49,31,41), Face(49,4,31),  Face(39,35,58), 
+  Face(39,5,35),  Face(39,12,5),  Face(50,17,33), Face(50,40,17), 
+  Face(50,6,40),  Face(51,44,34), Face(51,7,44),  Face(51,13,7),  
+  Face(52,8,46),  Face(52,25,8),  Face(52,15,25), Face(53,26,9),  
+  Face(53,42,26), Face(53,19,42), Face(55,38,10), Face(55,18,38), 
+  Face(55,28,18), Face(27,59,43), Face(27,11,59), Face(27,14,11), 
+  Face(0,10,7),   Face(4,11,1),   Face(2,8,5),    Face(6,9,3),    
+  Face(12,19,22), Face(13,23,16), Face(14,17,20), Face(15,21,18), 
+  Face(24,34,31), Face(28,35,25), Face(29,26,32), Face(27,30,33), 
+  Face(43,46,36), Face(37,47,40), Face(41,44,38), Face(39,45,42), 
+  Face(48,58,55), Face(52,59,49), Face(53,50,56), Face(51,54,57), 
+  Face(0,7,16),   Face(1,11,20),  Face(2,5,22),   Face(3,9,29),   
+  Face(4,1,31),   Face(5,8,35),   Face(6,3,40),   Face(7,10,44),  
+  Face(8,2,46),   Face(9,6,53),   Face(10,0,55),  Face(11,4,59),  
+  Face(12,22,5),  Face(13,16,7),  Face(14,20,11), Face(15,18,25), 
+  Face(16,23,32), Face(17,14,33), Face(18,21,38), Face(19,12,42), 
+  Face(20,17,47), Face(21,15,49), Face(22,19,56), Face(23,13,57), 
+  Face(24,31,1),  Face(25,35,8),  Face(26,29,9),  Face(27,33,14), 
+  Face(28,25,18), Face(29,32,23), Face(30,27,36), Face(31,34,41), 
+  Face(32,26,45), Face(33,30,50), Face(34,24,51), Face(35,28,58), 
+  Face(36,46,2),  Face(37,40,3),  Face(38,44,10), Face(39,42,12), 
+  Face(40,47,17), Face(41,38,21), Face(42,45,26), Face(43,36,27), 
+  Face(44,41,34), Face(45,39,48), Face(46,43,52), Face(47,37,54), 
+  Face(48,55,0),  Face(49,59,4),  Face(50,53,6),  Face(51,57,13), 
+  Face(52,49,15), Face(53,56,19), Face(54,51,24), Face(55,58,28), 
+  Face(56,50,30), Face(57,54,37), Face(58,48,39), Face(59,52,43)
+};
+
+
+Mesh::Edge SnubDodecMesh::edges[150] = {
+  Edge(0,16),  Edge(1,20),  Edge(2,22),  Edge(3,29),  Edge(4,31),
+  Edge(5,35),  Edge(6,40),  Edge(7,44),  Edge(8,46),  Edge(9,53),
+  Edge(10,55), Edge(11,59), Edge(12,5),  Edge(13,7),  Edge(14,11),
+  Edge(15,25), Edge(16,32), Edge(17,33), Edge(18,38), Edge(19,42),
+  Edge(20,47), Edge(21,49), Edge(22,56), Edge(23,57), Edge(24,1),
+  Edge(25,8),  Edge(26,9),  Edge(27,14), Edge(28,18), Edge(29,23),
+  Edge(30,36), Edge(31,41), Edge(32,45), Edge(33,50), Edge(34,51),
+  Edge(35,58), Edge(36,2),  Edge(37,3),  Edge(38,10), Edge(39,12),
+  Edge(40,17), Edge(41,21), Edge(42,26), Edge(43,27), Edge(44,34),
+  Edge(45,48), Edge(46,52), Edge(47,54), Edge(48,0),  Edge(49,4),
+  Edge(50,6),  Edge(51,13), Edge(52,15), Edge(53,19), Edge(54,24),
+  Edge(55,28), Edge(56,30), Edge(57,37), Edge(58,39), Edge(59,43),
+  Edge(0,7),   Edge(1,11),  Edge(2,5),   Edge(3,9),   Edge(4,1),
+  Edge(5,8),   Edge(6,3),   Edge(7,10),  Edge(8,2),   Edge(9,6),
+  Edge(10,0),  Edge(11,4),  Edge(12,22), Edge(13,16), Edge(14,20),
+  Edge(15,18), Edge(16,23), Edge(17,14), Edge(18,21), Edge(19,12),
+  Edge(20,17), Edge(21,15), Edge(22,19), Edge(23,13), Edge(24,31),
+  Edge(25,35), Edge(26,29), Edge(27,33), Edge(28,25), Edge(29,32),
+  Edge(30,27), Edge(31,34), Edge(32,26), Edge(33,30), Edge(34,24),
+  Edge(35,28), Edge(36,46), Edge(37,40), Edge(38,44), Edge(39,42),
+  Edge(40,47), Edge(41,38), Edge(42,45), Edge(43,36), Edge(44,41),
+  Edge(45,39), Edge(46,43), Edge(47,37), Edge(48,55), Edge(49,59),
+  Edge(50,53), Edge(51,57), Edge(52,49), Edge(53,56), Edge(54,51),
+  Edge(55,58), Edge(56,50), Edge(57,54), Edge(58,48), Edge(59,52),
+  Edge(0,55),  Edge(1,31),  Edge(2,46),  Edge(3,40),  Edge(4,59),
+  Edge(5,22),  Edge(6,53),  Edge(7,16),  Edge(8,35),  Edge(9,29),
+  Edge(10,44), Edge(11,20), Edge(12,42), Edge(13,57), Edge(14,33),
+  Edge(15,49), Edge(17,47), Edge(25,18), Edge(19,56), Edge(21,38),
+  Edge(23,32), Edge(24,51), Edge(26,45), Edge(27,36), Edge(28,58),
+  Edge(30,50), Edge(41,34), Edge(37,54), Edge(39,48), Edge(52,43)
+};
+
+
+Point SnubDodecMesh::vertices[60] = {
+  Point(0.8734f,0.2507f,0.2840f),    Point(-0.1461f,-0.9260f,-0.1655f),
+  Point(-0.7273f,0.4871f,0.3743f),   Point(0.1655f,0.1461f,-0.9260f),
+  Point(-0.2840f,-0.8734f,0.2507f),  Point(-0.3743f,0.7273f,0.4871f),
+  Point(-0.2507f,0.2840f,-0.8734f),  Point(0.9260f,-0.1655f,0.1461f),
+  Point(-0.4871f,0.3743f,0.7273f),   Point(0.0852f,0.5518f,-0.7711f),
+  Point(0.7711f,-0.0852f,0.5518f),   Point(-0.5518f,-0.7711f,-0.0852f),
+  Point(-0.1461f,0.9260f,0.1655f),   Point(0.8734f,-0.2507f,-0.2840f),
+  Point(-0.7273f,-0.4871f,-0.3743f), Point(-0.2507f,-0.2840f,0.8734f),
+  Point(0.9260f,0.1655f,-0.1461f),   Point(-0.4871f,-0.3743f,-0.7273f),
+  Point(0.1655f,-0.1461f,0.9260f),   Point(-0.2840f,0.8734f,-0.2507f),
+  Point(-0.3743f,-0.7273f,-0.4871f), Point(0.0852f,-0.5518f,0.7711f),
+  Point(-0.5518f,0.7711f,0.0852f),   Point(0.7711f,0.0852f,-0.5518f),
+  Point(0.2840f,-0.8734f,-0.2507f),  Point(-0.1655f,0.1461f,0.9260f),
+  Point(0.3743f,0.7273f,-0.4871f),   Point(-0.9260f,-0.1655f,-0.1461f),
+  Point(0.2507f,0.2840f,0.8734f),    Point(0.4871f,0.3743f,-0.7273f),
+  Point(-0.8734f,0.2507f,-0.2840f),  Point(0.1461f,-0.9260f,0.1655f),
+  Point(0.7273f,0.4871f,-0.3743f),   Point(-0.7711f,-0.0852f,-0.5518f),
+  Point(0.5518f,-0.7711f,0.0852f),   Point(-0.0852f,0.5518f,0.7711f),
+  Point(-0.9260f,0.1655f,0.1461f),   Point(0.2507f,-0.2840f,-0.8734f),
+  Point(0.4871f,-0.3743f,0.7273f),   Point(0.2840f,0.8734f,0.2507f),
+  Point(-0.1655f,-0.1461f,-0.9260f), Point(0.3743f,-0.7273f,0.4871f),
+  Point(0.1461f,0.9260f,-0.1655f),   Point(-0.8734f,-0.2507f,0.2840f),
+  Point(0.7273f,-0.4871f,0.3743f),   Point(0.5518f,0.7711f,-0.0852f),
+  Point(-0.7711f,0.0852f,0.5518f),   Point(-0.0852f,-0.5518f,-0.7711f),
+  Point(0.6421f,0.6250f,0.3216f),    Point(-0.3216f,-0.6421f,0.6250f),
+  Point(-0.6250f,0.3216f,-0.6421f),  Point(0.6421f,-0.6250f,-0.3216f),
+  Point(-0.6250f,-0.3216f,0.6421f),  Point(-0.3216f,0.6421f,-0.6250f),
+  Point(0.3216f,-0.6421f,-0.6250f),  Point(0.6250f,0.3216f,0.6421f),
+  Point(-0.6421f,0.6250f,-0.3216f),  Point(0.6250f,-0.3216f,-0.6421f),
+  Point(0.3216f,0.6421f,0.6250f),    Point(-0.6421f,-0.6250f,0.3216f)
+};
+
+
+
+
+================================================
+FILE: project/SnubDodecMesh.h
+================================================
+// SnubDodecMesh.h
+// -- mesh for a snub dodecahedron
+// cs250 1/15
+
+#ifndef CS250_SNUBDODEC_H
+#define CS250_SNUBDODEC_H
+
+#include "Mesh.h"
+
+
+class SnubDodecMesh : public Mesh {
+  public:
+    int VertexCount(void) { return 60; }
+    Point GetVertex(int i) { return vertices[i]; }
+    Vector Dimensions(void) { return Vector(2,2,2); }
+    Point Center(void) { return Point(0,0,0); }
+    int FaceCount(void) { return 116; }
+    Face GetFace(int i) { return faces[i]; }
+    int EdgeCount(void) { return 150; }
+    Edge GetEdge(int i) { return edges[i]; }
+  private:
+    static Point vertices[60];
+    static Face faces[116];
+    static Edge edges[150];
+};
+
+
+#endif
+
+
+
