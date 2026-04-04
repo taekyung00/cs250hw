@@ -93,13 +93,13 @@
     <ClCompile Include="..\Affine.cpp" />
     <ClCompile Include="..\Camera.cpp" />
     <ClCompile Include="..\CameraRender2D.cpp" />
-    <ClCompile Include="..\CameraRender2DTest.cpp" />
     <ClCompile Include="..\CubeMesh.cpp" />
     <ClCompile Include="..\FrustumMesh.cpp" />
     <ClCompile Include="..\Projection.cpp" />
     <ClCompile Include="..\Render.cpp" />
     <ClCompile Include="..\SimpleRender.cpp" />
     <ClCompile Include="..\SnubDodecMesh.cpp" />
+    <ClCompile Include="..\tests_and_demos\CubeRenderDemo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Affine.h" />
