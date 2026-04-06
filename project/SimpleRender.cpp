@@ -9,6 +9,24 @@
  *****************************************************************************/
 #include "SimpleRender.h"
 
+namespace {
+	/**
+ * @brief Casting function: Converts a Vector to a Point.
+ */
+	Point VectorToPoint(const Vector& v)
+	{
+		return Point(v.x, v.y, v.z);
+	}
+
+	/**
+	 * @brief Casting function: Converts a Point to a Vector.
+	 */
+	Vector PointToVector(const Point& p)
+	{
+		return Vector(p.x, p.y, p.z);
+	}
+}
+
 namespace
 {
 	/**

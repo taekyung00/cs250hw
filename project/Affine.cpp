@@ -282,19 +282,3 @@ Affine inverse(const Affine& A)
 	// Result: (T * L)^-1 = L^-1 * T^-1
 	return invL * invT;
 }
-
-/**
- * @brief Casting function: Converts a Vector to a Point.
- */
-Point VectorToPoint(const Vector& v)
-{
-	return Point(v.x, v.y, v.z);
-}
-
-/**
- * @brief Casting function: Converts a Point to a Vector.
- */
-Vector PointToVector(const Point& p)
-{
-	return Vector(p.x, p.y, p.z);
-}

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27130.2020
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CS200", "CS200.vcxproj", "{7ABC44A1-16E8-48A2-A0C0-719102F4E2F9}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CS250", "CS250.vcxproj", "{7ABC44A1-16E8-48A2-A0C0-719102F4E2F9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

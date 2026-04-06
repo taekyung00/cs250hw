@@ -61,8 +61,6 @@ Affine translate(const Vector& v);
 Affine scale(float r);
 Affine scale(float rx, float ry, float rz);
 Affine inverse(const Affine& A);
-Point VectorToPoint(const Vector& v);
-Vector PointToVector(const Point& p);
 
 
 #endif
