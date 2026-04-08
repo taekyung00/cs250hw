@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -96,10 +96,11 @@
     <ClCompile Include="..\CubeMesh.cpp" />
     <ClCompile Include="..\FrustumMesh.cpp" />
     <ClCompile Include="..\Projection.cpp" />
+    <ClCompile Include="..\RasterUtilities.cpp" />
     <ClCompile Include="..\Render.cpp" />
     <ClCompile Include="..\SimpleRender.cpp" />
     <ClCompile Include="..\SnubDodecMesh.cpp" />
-    <ClCompile Include="..\tests_and_demos\CameraRender2DTest.cpp" />
+    <ClCompile Include="..\tests_and_demos\TriangleZTest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Affine.h" />
@@ -109,6 +110,8 @@
     <ClInclude Include="..\FrustumMesh.h" />
     <ClInclude Include="..\Mesh.h" />
     <ClInclude Include="..\Projection.h" />
+    <ClInclude Include="..\Raster.h" />
+    <ClInclude Include="..\RasterUtilities.h" />
     <ClInclude Include="..\Render.h" />
     <ClInclude Include="..\SimpleRender.h" />
     <ClInclude Include="..\SnubDodecMesh.h" />
