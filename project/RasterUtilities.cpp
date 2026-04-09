@@ -174,10 +174,15 @@ void FillTriangle(Raster& r, const Hcoord& P, const Hcoord& Q, const Hcoord& R)
 	if (ymax < P_[1].y) ymax = P_[1].y;
 	if (ymin > P_[2].y) ymin = P_[2].y;
 	if (ymax < P_[2].y) ymax = P_[2].y;
-	int int_xmin = static_cast<int>(std::ceil(xmin));
+	//clamping
+	int int_xmin = static_cast<int>(std::ceil(xmin)) ;
+	if (int_xmin < 0) int_xmin = 0;
 	int int_xmax = static_cast<int>(std::floor(xmax));
+	if (int_xmax >= r.Width()) int_xmax = r.Width() - 1;
 	int int_ymin = static_cast<int>(std::ceil(ymin));
+	if (int_ymin < 0) int_ymin = 0;
 	int int_ymax = static_cast<int>(std::floor(ymax));
+	if (int_ymax >= r.Height()) int_ymax = r.Height() - 1;
 
 	float Eval0 = EquationValue(E0, { static_cast<float>(int_xmin) , static_cast<float>(int_ymin) });
 	float Eval1 = EquationValue(E1, { static_cast<float>(int_xmin) , static_cast<float>(int_ymin) });
@@ -188,6 +193,7 @@ void FillTriangle(Raster& r, const Hcoord& P, const Hcoord& Q, const Hcoord& R)
 	if (std::abs(Normal.z) < 1e-5f) return;
 	float d = dot(Normal, PointToVector(P_[0]));
 
+	float dz_dx = -Normal.x / Normal.z;
 	
 	for (int y = int_ymin; y <= int_ymax; ++y)
 	{
@@ -195,28 +201,28 @@ void FillTriangle(Raster& r, const Hcoord& P, const Hcoord& Q, const Hcoord& R)
 		float hEval0 = Eval0;
 		float hEval1 = Eval1;
 		float hEval2 = Eval2;
+		float hZ = (d - Normal.x * int_xmin - Normal.y * y) / Normal.z;
 		r.GotoPoint(int_xmin, y);
 		for (int x = int_xmin; x <= int_xmax; ++x) {
 				if (PointInEdgeTopLeft(E0, hEval0) && PointInEdgeTopLeft(E1, hEval1) && PointInEdgeTopLeft(E2, hEval2)) 
 				{
-					float z = (d - Normal.x * x - Normal.y * y) / Normal.z;
-					if (z < r.GetZ())
+					if (hZ < r.GetZ())
 					{
 						r.WritePixel();
-						r.WriteZ(z);
+						r.WriteZ(hZ);
 					}
 				}
 				// incrementally update hEval0, hEval1, hEval2
 				hEval0 += E0.A;
 				hEval1 += E1.A;
 				hEval2 += E2.A;
+				hZ += dz_dx;
 				r.IncrementX();
 		}
 		// incrementally update Eval0, Eval1, Eval2
 		Eval0 += E0.B;
 		Eval1 += E1.B;
 		Eval2 += E2.B;
-		r.IncrementY();
 	}
 }
 
