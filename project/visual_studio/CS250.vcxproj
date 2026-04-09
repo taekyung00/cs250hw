@@ -100,7 +100,7 @@
     <ClCompile Include="..\Render.cpp" />
     <ClCompile Include="..\SimpleRender.cpp" />
     <ClCompile Include="..\SnubDodecMesh.cpp" />
-    <ClCompile Include="..\tests_and_demos\TriangleZTest.cpp" />
+    <ClCompile Include="..\tests_and_demos\TriangleTest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Affine.h" />

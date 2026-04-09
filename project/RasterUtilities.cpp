@@ -35,9 +35,13 @@ namespace
 		float A{ 0 };
 		float B{ 0 };
 		float C{ 0 };
-		constexpr bool tl() const noexcept {
-			return A > 0.f || (A == 0.f && B < 0.f);
+		bool is_tl{ false };
+		constexpr void make_tl() {
+			is_tl = A > 0.f || (A == 0.f && B < 0.f);
 		}
+		//constexpr bool tl() const noexcept {
+		//	return A > 0.f || (A == 0.f && B < 0.f);
+		//}
 	};
 	struct vec2 {
 		float x{ 0.f };
@@ -56,7 +60,7 @@ namespace
 	 * to prevent drawing pixels shared between adjacent triangles.
 	 */
 	[[nodiscard]] constexpr bool PointInEdgeTopLeft(const Edge& edge, float Eval) noexcept {
-		return Eval > 0.f || (Eval == 0.f && edge.tl());
+		return Eval > 0.f || (Eval == 0.f && edge.is_tl);
 	}
 
 	/**
@@ -67,6 +71,7 @@ namespace
 		edge.A = pos0.y - pos1.y;
 		edge.B = pos1.x - pos0.x;
 		edge.C = pos1.y * pos0.x - pos1.x * pos0.y;
+		edge.make_tl();
 		return edge;
 	}
 
