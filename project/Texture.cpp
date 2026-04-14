@@ -26,7 +26,7 @@ Texture::Texture(unsigned W, unsigned H)
     for (int i=0; i < width; ++i) {
       float u = iW*(i+0.5f),
             v = iH*(j+0.5f),
-            rr = pow(u-0.5f,2) + pow(v-0.5f,2);
+          rr = static_cast<float>(pow(u - 0.5f, 2) + pow(v - 0.5f, 2));
       int index = j*stride + 3*i;
       if (rr > 0.16f) {
         data[index+R] = (unsigned char)(100 + 155*u);
@@ -132,5 +132,18 @@ Vector Texture::uvToRGB(float u, float v) {
       y = int(height*v),
       index = y*stride + 3*x;
   return Vector(data[index+R],data[index+G],data[index+B]);
+}
+
+Texture& Texture::operator=(const Texture& rhs)
+{
+    if (this != &rhs) {
+        delete[] data;
+        width = rhs.width;
+        height = rhs.height;
+        stride = rhs.stride;
+        data = new unsigned char[stride * height];
+        std::copy(rhs.data, rhs.data + stride * height, data);
+    }
+    return *this;
 }
 

@@ -1,7 +1,7 @@
 Directory: cs250hw
-Files analyzed: 31
+Files analyzed: 38
 
-Estimated tokens: 32.5k
+Estimated tokens: 41.8k
 
 Directory structure:
 └── cs250hw/
@@ -16,11 +16,15 @@ Directory structure:
         ├── CubeMesh.h
         ├── FrustumMesh.cpp
         ├── FrustumMesh.h
+        ├── HalfSpace.h
+	├── texture.bmp
+        ├── Interpolate.h
         ├── main.cpp
         ├── Mesh.h
         ├── Projection.cpp
         ├── Projection.h
         ├── Raster.h
+        ├── RasterUtilities.cpp
         ├── RasterUtilities.h
         ├── Render.cpp
         ├── Render.h
@@ -28,6 +32,8 @@ Directory structure:
         ├── SimpleRender.h
         ├── SnubDodecMesh.cpp
         ├── SnubDodecMesh.h
+        ├── Texture.cpp
+        ├── Texture.h
         └── tests_and_demos/
             ├── AffineDemo.cpp
             ├── AffineTest.cpp
@@ -35,7 +41,9 @@ Directory structure:
             ├── CameraRender2DTest.cpp
             ├── CubeRenderDemo.cpp
             ├── CubeTest.cpp
+            ├── InterpolationTest.cpp
             ├── SimpleRenderTest.cpp
+            ├── TextureClipTest.cpp
             ├── TriangleTest.cpp
             └── TriangleZTest.cpp
 
@@ -328,21 +336,6 @@ Affine inverse(const Affine& A)
 	return invL * invT;
 }
 
-/**
- * @brief Casting function: Converts a Vector to a Point.
- */
-Point VectorToPoint(const Vector& v)
-{
-	return Point(v.x, v.y, v.z);
-}
-
-/**
- * @brief Casting function: Converts a Point to a Vector.
- */
-Vector PointToVector(const Point& p)
-{
-	return Vector(p.x, p.y, p.z);
-}
 
 
 ================================================
@@ -411,8 +404,6 @@ Affine translate(const Vector& v);
 Affine scale(float r);
 Affine scale(float rx, float ry, float rz);
 Affine inverse(const Affine& A);
-Point VectorToPoint(const Vector& v);
-Vector PointToVector(const Point& p);
 
 
 #endif
@@ -586,6 +577,24 @@ FILE: project/CameraRender2D.cpp
  *****************************************************************************/
 #include "CameraRender2D.h"
 #include "Projection.h"
+
+namespace {
+    /**
+ * @brief Casting function: Converts a Vector to a Point.
+ */
+    Point VectorToPoint(const Vector& v)
+    {
+        return Point(v.x, v.y, v.z);
+    }
+
+    /**
+     * @brief Casting function: Converts a Point to a Vector.
+     */
+    Vector PointToVector(const Point& p)
+    {
+        return Vector(p.x, p.y, p.z);
+    }
+}
 
 namespace
 {
@@ -1083,6 +1092,97 @@ class FrustumMesh : public Mesh {
 
 
 ================================================
+FILE: project/HalfSpace.h
+================================================
+// HalfSpace.h
+// -- half-spaces and perspective interpolation
+// cs250 3/17
+
+#ifndef CS250_HALFSPACE_H
+#define CS250_HALFSPACE_H
+
+#include <vector>
+#include "Affine.h"
+
+
+struct HalfSpace : Hcoord {
+  HalfSpace(float x=0, float y=0, float z=0, float w=0) : Hcoord(x,y,z,w) {}
+  HalfSpace(const Vector& m, const Point& C);
+  HalfSpace(const Point& A, const Point& B, const Point& C, const Point& P);
+};
+
+
+inline
+float dot(const HalfSpace& h, const Hcoord& P)
+  { return h.x*P.x+h.y*P.y+h.z*P.z+h.w*P.w; }
+
+
+
+struct Polyhedron {
+  std::vector<HalfSpace> half_spaces;
+  Polyhedron(bool cube=false);
+  Polyhedron(float fov, float a, float N, float F);
+};
+
+
+bool contains(const Polyhedron& polyhedron, const Hcoord& P);
+
+
+#endif
+
+
+
+
+================================================
+FILE: project/Interpolate.h
+================================================
+// Interpolate.h
+// -- perspective-correct texture mapping and clipping
+// cs250 4/17
+
+#ifndef CS250_INTERPOLATE_H
+#define CS250_INTERPOLATE_H
+
+
+#include <vector>
+#include "Affine.h"
+#include "HalfSpace.h"
+#include "Raster.h"
+#include "Texture.h"  // from CS 200
+
+
+class TexturedCoord : public Hcoord {
+  public:
+    float u, v;
+    explicit TexturedCoord(const Hcoord& P=Hcoord(), float _u=0, float _v=0)
+                  : Hcoord(P), u(_u), v(_v) { }
+    static void SetTexture(Texture *tptr) { texture = tptr; }
+    static void SetColorScale(float mu) { color_scale = mu; }
+    friend void FillTriangle(Raster&, const TexturedCoord&,
+                             const TexturedCoord&, const TexturedCoord&);
+  private:
+    static float color_scale;
+    static Texture *texture;
+};
+
+
+class TextureClip {
+  public:
+    TextureClip(void) { }
+    TextureClip(const Polyhedron& poly) : half_spaces(poly.half_spaces) { }
+    bool operator()(std::vector<TexturedCoord>& vertices);
+  private:
+    std::vector<HalfSpace> half_spaces;
+    std::vector<TexturedCoord> temp_vertices;
+};
+
+
+#endif
+
+
+
+
+================================================
 FILE: project/main.cpp
 ================================================
 // Headerphile.com OpenGL Tutorial part 1
@@ -1328,6 +1428,24 @@ FILE: project/Projection.cpp
  * camera-to-NDC transformation matrices.
  *****************************************************************************/
 #include "Projection.h"
+
+namespace {
+    /**
+ * @brief Casting function: Converts a Vector to a Point.
+ */
+    Point VectorToPoint(const Vector& v)
+    {
+        return Point(v.x, v.y, v.z);
+    }
+
+    /**
+     * @brief Casting function: Converts a Point to a Vector.
+     */
+    Vector PointToVector(const Point& p)
+    {
+        return Vector(p.x, p.y, p.z);
+    }
+}
 
  /**
   * Maps camera space coordinates to world space coordinates.
@@ -1593,6 +1711,389 @@ int Raster::Stride(void) const {
 
 
 ================================================
+FILE: project/RasterUtilities.cpp
+================================================
+#include "RasterUtilities.h"
+#include "Affine.h"
+#include <cmath>
+
+/******************************************************************************
+ * File: RasterUtilities.cpp
+ * Author: Taekyung Ho
+ * Course: CS250
+ * Assignment: Z Buffer Programming Assignment
+ * Description: Implements frame/z-buffer clearing and the Edge Equations
+ * Triangle Rasterization Method with Z-buffering and planar
+ * depth interpolation.
+ *****************************************************************************/
+
+namespace
+{
+	/**
+	 * Helper operator to divide all components of an Hcoord by a scalar.
+	 * Used for explicit perspective divide.
+	 */
+	template <typename DIVISOR>
+	Hcoord operator/(const Hcoord& A, DIVISOR r) {
+		Hcoord B(A);
+		B.x /= r;
+		B.y /= r;
+		B.z /= r;
+		B.w /= r;
+		return B;
+	}
+	
+	/**
+	 * Represents the implicit line equation Ax + By + C = 0 for an edge.
+	 */
+	struct Edge {
+		float A{ 0 };
+		float B{ 0 };
+		float C{ 0 };
+		bool is_tl{ false };
+		constexpr void make_tl() {
+			is_tl = A > 0.f || (A == 0.f && B < 0.f);
+		}
+		//constexpr bool tl() const noexcept {
+		//	return A > 0.f || (A == 0.f && B < 0.f);
+		//}
+	};
+	struct vec2 {
+		float x{ 0.f };
+		float y{ 0.f };
+	};
+
+	/**
+	 * Evaluates the edge equation f(x,y) = Ax + By + C at a given 2D point.
+	 */
+	[[nodiscard]] constexpr float EquationValue(const Edge& edge, vec2 point) noexcept {
+		return edge.A * point.x + edge.B * point.y + edge.C;
+	}
+
+	/**
+	 * Checks if a point is inside the edge, applying the Top-Left rule
+	 * to prevent drawing pixels shared between adjacent triangles.
+	 */
+	[[nodiscard]] constexpr bool PointInEdgeTopLeft(const Edge& edge, float Eval) noexcept {
+		return Eval > 0.f || (Eval == 0.f && edge.is_tl);
+	}
+
+	/**
+	 * Calculates the A, B, C coefficients for the edge from pos0 to pos1.
+	 */
+	[[nodiscard]] constexpr Edge calc_edge(vec2 pos0, vec2 pos1) noexcept {
+		Edge edge;
+		edge.A = pos0.y - pos1.y;
+		edge.B = pos1.x - pos0.x;
+		edge.C = pos1.y * pos0.x - pos1.x * pos0.y;
+		edge.make_tl();
+		return edge;
+	}
+
+	Vector PointToVector(const Point& p)
+	{
+		return Vector(p.x, p.y, p.z);
+	}
+	
+	/**
+	 * Determines if the triangle is back-facing using a 2D cross product.
+	 */
+	[[nodiscard]] constexpr bool back_facing(vec2 pos0, vec2 pos1, vec2 pos2) noexcept {
+		return (pos1.x - pos0.x) * (pos2.y - pos0.y) - (pos2.x - pos0.x) * (pos1.y - pos0.y) < 0;
+	}
+
+	void swap_hcoord(Hcoord& a, Hcoord& b)
+	{
+		Hcoord temp = a;
+		a = b;
+		b = temp;
+	}
+	
+	/**
+	 * Reorders the vertices to guarantee a front-facing (counter-clockwise)
+	 * winding order, ensuring consistent edge equation signs.
+	 */
+	void make_front_face(Hcoord(&P)[3])
+	{		
+		if (!back_facing({ P[0].x, P[0].y }, { P[2].x, P[2].y }, { P[1].x, P[1].y }))
+		{
+			swap_hcoord(P[1], P[2]);
+			return;
+		}
+		if (!back_facing({ P[1].x, P[1].y }, { P[0].x, P[0].y }, { P[2].x, P[2].y }))
+		{
+			swap_hcoord(P[0], P[1]);
+			return;
+		}
+		if (!back_facing({ P[1].x, P[1].y }, { P[2].x, P[2].y }, { P[0].x, P[0].y }))
+		{
+			swap_hcoord(P[0], P[2]);
+			swap_hcoord(P[0], P[1]);
+			return;
+		}
+		if (!back_facing({ P[2].x, P[2].y }, { P[0].x, P[0].y }, { P[1].x, P[1].y }))
+		{
+			swap_hcoord(P[0], P[1]);
+			swap_hcoord(P[0], P[2]);
+			return;
+		}
+		if (!back_facing({ P[2].x, P[2].y }, { P[1].x, P[1].y }, { P[0].x, P[0].y }))
+		{
+			swap_hcoord(P[0], P[2]);
+			return;
+		}
+	}
+}
+
+/**
+ * Clears the frame buffer and resets the Z-buffer to the specified depth.
+ */
+void ClearBuffers(Raster& r, float z)
+{
+	int width = r.Width(),
+		height = r.Height();
+	for (int i = 0; i < height; ++i) {
+		int j = 0;
+		r.GotoPoint(j, i);
+		for (; j < width; ++j)
+		{
+			r.WriteZ(z);
+			r.WritePixel();
+			r.IncrementX();
+		}
+	}
+}
+/**
+ * Rasterizes a 3D triangle using the Edge Equations method, applying
+ * Z-buffering and planar depth interpolation for hidden surface removal.
+ */
+void FillTriangle(Raster& r, const Hcoord& P, const Hcoord& Q, const Hcoord& R)
+{
+	// divide by w 
+	Hcoord P_[3] = {
+		P / P.w,
+		Q / Q.w,
+		R / R.w };
+	if (back_facing({ P_[0].x, P_[0].y }, { P_[1].x, P_[1].y }, { P_[2].x, P_[2].y }))
+		make_front_face(P_);
+	if (std::abs(P_[2].y - P_[0].y) < 1e-5f) return;
+	//NOTE: The edge equations have to be calculated before sorting the vertices,because  but since they only depend on the vertex positions, the order of the vertices does not affect the edge equations.
+	Edge E0 = calc_edge(vec2{ P_[0].x,P_[0].y }, vec2{ P_[1].x,P_[1].y });
+	Edge E1 = calc_edge(vec2{ P_[1].x,P_[1].y }, vec2{ P_[2].x,P_[2].y });
+	Edge E2 = calc_edge(vec2{ P_[2].x,P_[2].y }, vec2{ P_[0].x,P_[0].y });
+
+	float xmin = P_[0].x;
+	float xmax = P_[0].x;
+	if (xmin > P_[1].x) xmin = P_[1].x;
+	if (xmax < P_[1].x) xmax = P_[1].x;
+	if (xmin > P_[2].x) xmin = P_[2].x;
+	if (xmax < P_[2].x) xmax = P_[2].x;
+	float ymin = P_[0].y;
+	float ymax = P_[0].y;
+	if (ymin > P_[1].y) ymin = P_[1].y;
+	if (ymax < P_[1].y) ymax = P_[1].y;
+	if (ymin > P_[2].y) ymin = P_[2].y;
+	if (ymax < P_[2].y) ymax = P_[2].y;
+	//clamping
+	int int_xmin = static_cast<int>(std::ceil(xmin)) ;
+	if (int_xmin < 0) int_xmin = 0;
+	int int_xmax = static_cast<int>(std::floor(xmax));
+	if (int_xmax >= r.Width()) int_xmax = r.Width() - 1;
+	int int_ymin = static_cast<int>(std::ceil(ymin));
+	if (int_ymin < 0) int_ymin = 0;
+	int int_ymax = static_cast<int>(std::floor(ymax));
+	if (int_ymax >= r.Height()) int_ymax = r.Height() - 1;
+
+	float Eval0 = EquationValue(E0, { static_cast<float>(int_xmin) , static_cast<float>(int_ymin) });
+	float Eval1 = EquationValue(E1, { static_cast<float>(int_xmin) , static_cast<float>(int_ymin) });
+	float Eval2 = EquationValue(E2, { static_cast<float>(int_xmin) , static_cast<float>(int_ymin) });
+
+
+	Vector Normal = cross(Vector(P_[1] - P_[0]), Vector(P_[2] - P_[0]));
+	if (std::abs(Normal.z) < 1e-5f) return;
+	float d = dot(Normal, PointToVector(P_[0]));
+
+	float dz_dx = -Normal.x / Normal.z;
+	
+	for (int y = int_ymin; y <= int_ymax; ++y)
+	{
+		// start values for horizontal spans
+		float hEval0 = Eval0;
+		float hEval1 = Eval1;
+		float hEval2 = Eval2;
+		float hZ = (d - Normal.x * int_xmin - Normal.y * y) / Normal.z;
+		r.GotoPoint(int_xmin, y);
+		for (int x = int_xmin; x <= int_xmax; ++x) {
+				if (PointInEdgeTopLeft(E0, hEval0) && PointInEdgeTopLeft(E1, hEval1) && PointInEdgeTopLeft(E2, hEval2)) 
+				{
+					if (hZ < r.GetZ())
+					{
+						r.WritePixel();
+						r.WriteZ(hZ);
+					}
+				}
+				// incrementally update hEval0, hEval1, hEval2
+				hEval0 += E0.A;
+				hEval1 += E1.A;
+				hEval2 += E2.A;
+				hZ += dz_dx;
+				r.IncrementX();
+		}
+		// incrementally update Eval0, Eval1, Eval2
+		Eval0 += E0.B;
+		Eval1 += E1.B;
+		Eval2 += E2.B;
+	}
+}
+
+/*
+* edge walking algorithm
+* void FillTriangle(Raster& r, const Hcoord& P, const Hcoord& Q, const Hcoord& R)
+{
+	// divide by w 
+	Hcoord P_[3] = {
+		P / P.w,
+		Q / Q.w,
+		R / R.w };
+	//NOTE: The edge equations have to be calculated before sorting the vertices,because  but since they only depend on the vertex positions, the order of the vertices does not affect the edge equations.
+	Edge E0 = calc_edge(vec2{ P_[0].x,P_[0].y }, vec2{ P_[1].x,P_[1].y });
+	Edge E1 = calc_edge(vec2{ P_[1].x,P_[1].y }, vec2{ P_[2].x,P_[2].y });
+	Edge E2 = calc_edge(vec2{ P_[2].x,P_[2].y }, vec2{ P_[0].x,P_[0].y });
+
+	// Sort vertices by y-coordinate ascending (P0.y <= P1.y <= P2.y)
+	Hcoord temp;
+	if (P_[0].y > P_[1].y)
+	{
+		temp = P_[0];
+		P_[0] = P_[1];
+		P_[1] = temp;
+	}
+	if (P_[0].y > P_[2].y)
+	{
+		temp = P_[0];
+		P_[0] = P_[2];
+		P_[2] = temp;
+	}
+	if (P_[1].y > P_[2].y)
+	{
+		temp = P_[1];
+		P_[1] = P_[2];
+		P_[2] = temp;
+	}
+
+	
+
+	// Assuming vertices are sorted: p0.y <= p1.y <= p2.y
+	// Compute inverse slopes for the edges starting from p0
+	float invSlope01 = (P_[1].x - P_[0].x) / (P_[1].y - P_[0].y); // Edge P0-P1
+	float invSlope02 = (P_[2].x - P_[0].x) / (P_[2].y - P_[0].y); // Edge P0-P2
+
+	// Determine configuration: 
+	// If invSlope01 < invSlope02, p1 is on the left.
+	// If invSlope01 > invSlope02, p1 is on the right.
+	bool isMiddleVertexLeft = (invSlope01 < invSlope02);
+
+	Vector Normal = cross(Vector(P_[1] - P_[0]), Vector(P_[2] - P_[0]));
+	float d = dot(Normal, PointToVector(P_[0]));
+
+	//LOWER PART
+	int j_min = static_cast<int>(std::ceil(P_[0].y));
+	int j_max = static_cast<int>(std::floor(P_[1].y));
+
+	for (int j = j_min; j <= j_max; ++j)
+	{
+		// Calculate x coordinates on both edges at current scanline y = j
+		float x_edge1 = P_[0].x + invSlope01 * (j - P_[0].y);
+		float x_edge2 = P_[0].x + invSlope02 * (j - P_[0].y);
+
+		float x_min, x_max;
+
+		if (isMiddleVertexLeft) {
+			// p1 is on the left: P0-P1 is left edge, P0-P2 is right edge
+			x_min = x_edge1;
+			x_max = x_edge2;
+		}
+		else {
+			// p1 is on the right: P0-P2 is left edge, P0-P1 is right edge
+			x_min = x_edge2;
+			x_max = x_edge1;
+		}
+
+		int i_min = static_cast<int>(std::ceil(x_min));
+		int i_max = static_cast<int>(std::floor(x_max));
+		// Move to the starting pixel of the span
+		r.GotoPoint(i_min, j);
+		for (int i = i_min; i <= i_max; ++i)
+		{
+			vec2 point{ static_cast<float>(i) + 0.5f, static_cast<float>(j) + 0.5f };
+			[[maybe_unused]]float Eval0 = EquationValue(E0, point);
+			[[maybe_unused]] float Eval1 = EquationValue(E1, point);
+			[[maybe_unused]] float Eval2 = EquationValue(E2, point);
+			//if (PointInEdgeTopLeft(E0, Eval0) && PointInEdgeTopLeft(E1, Eval1) && PointInEdgeTopLeft(E2, Eval2))
+			//{
+				float z = (d - Normal.x * i - Normal.y * j) / Normal.z;
+				if (z < r.GetZ())
+				{
+					r.WritePixel();
+					r.WriteZ(z);
+				}
+			//}
+			r.IncrementX();
+		}
+		r.IncrementY();
+	}
+
+	//UPPER PART
+	float invSlope12 = (P_[2].x - P_[1].x) / (P_[2].y - P_[1].y); // Edge P1-P2
+	j_min = static_cast<int>(std::ceil(P_[1].y));
+	j_max = static_cast<int>(std::floor(P_[2].y));
+
+	for (int j = j_min; j <= j_max; ++j)
+	{
+		float x_min, x_max;
+
+		if (isMiddleVertexLeft) {
+			// Calculate x coordinates on both edges at current scanline y = j
+			// p1 is on the left: P1-P2 is left edge, P0-P2 is right edge
+			x_min = P_[1].x + invSlope12 * (j - P_[1].y);
+			x_max = P_[2].x - invSlope02 * (P_[2].y - j);
+		}
+		else {
+			// Calculate x coordinates on both edges at current scanline y = j
+			// p1 is on the right: P0-P2 is left edge, P1-P2 is right edge
+			x_min = P_[2].x - invSlope02 * (P_[2].y - j);
+			x_max = P_[1].x + invSlope12 * (j - P_[1].y);
+		}
+
+		int i_min = static_cast<int>(std::ceil(x_min));
+		int i_max = static_cast<int>(std::floor(x_max));
+
+		// Move to the starting pixel of the span
+		r.GotoPoint(i_min, j);
+		for (int i = i_min; i <= i_max; ++i)
+		{
+			vec2 point{ static_cast<float>(i) + 0.5f, static_cast<float>(j) + 0.5f };
+			[[maybe_unused]] float Eval0 = EquationValue(E0, point);
+			[[maybe_unused]] float Eval1 = EquationValue(E1, point);
+			[[maybe_unused]] float Eval2 = EquationValue(E2, point);
+			//if (PointInEdgeTopLeft(E0, Eval0) && PointInEdgeTopLeft(E1, Eval1) && PointInEdgeTopLeft(E2, Eval2))
+			//{
+				float z = (d - Normal.x * i - Normal.y * j) / Normal.z;
+				if (z < r.GetZ())
+				{
+					r.WritePixel();
+					r.WriteZ(z);
+				}
+			//}
+			r.IncrementX();
+		}
+		r.IncrementY();
+	}
+}
+*/
+
+
+================================================
 FILE: project/RasterUtilities.h
 ================================================
 // RasterUtilities.h
@@ -1773,6 +2274,24 @@ FILE: project/SimpleRender.cpp
  * culling using a fixed camera.
  *****************************************************************************/
 #include "SimpleRender.h"
+
+namespace {
+	/**
+ * @brief Casting function: Converts a Vector to a Point.
+ */
+	Point VectorToPoint(const Vector& v)
+	{
+		return Point(v.x, v.y, v.z);
+	}
+
+	/**
+	 * @brief Casting function: Converts a Point to a Vector.
+	 */
+	Vector PointToVector(const Point& p)
+	{
+		return Vector(p.x, p.y, p.z);
+	}
+}
 
 namespace
 {
@@ -2074,6 +2593,182 @@ class SnubDodecMesh : public Mesh {
     static Point vertices[60];
     static Face faces[116];
     static Edge edges[150];
+};
+
+
+#endif
+
+
+
+
+================================================
+FILE: project/Texture.cpp
+================================================
+// Texture.cpp
+// jsh 11/16
+
+#include <iostream>
+
+#include <fstream>
+#include <cmath>
+#include <stdexcept>
+#include "Texture.h"
+using namespace std;
+
+
+Texture::Texture(unsigned W, unsigned H)
+    : data(0),
+      width(W),
+      height(H),
+      stride(3*W) {
+  unsigned pad = 4 - (3*W)%4;
+  stride += (pad != 4) ? pad : 0;
+
+  data = new unsigned char[stride*height];
+
+  float iW = 1.0f/W,
+        iH = 1.0f/H;
+  for (int j=0; j < height; ++j) {
+    for (int i=0; i < width; ++i) {
+      float u = iW*(i+0.5f),
+            v = iH*(j+0.5f),
+          rr = static_cast<float>(pow(u - 0.5f, 2) + pow(v - 0.5f, 2));
+      int index = j*stride + 3*i;
+      if (rr > 0.16f) {
+        data[index+R] = (unsigned char)(100 + 155*u);
+        data[index+G] = 0;
+        data[index+B] = (unsigned char)(100 + 155*v);
+      }
+      else if (rr < 0.09f) {
+        data[index+R] = (unsigned char)(100 + 155*v);
+        data[index+G] = 0;
+        data[index+B] = (unsigned char)(100 + 155*u);
+      }
+      else {
+        data[index+R] = 0;
+        data[index+G] = 255;
+        data[index+B] = 0;
+      }
+    }
+  }
+}
+
+
+Texture::Texture(const char *bitmap)
+    : data(0) {
+
+  // read in raw data
+  fstream in(bitmap,ios_base::in|ios_base::binary);
+  char header[38];
+  in.read(header,38);
+  unsigned offset = *reinterpret_cast<unsigned*>(header+10),
+           size = *reinterpret_cast<unsigned*>(header+34);
+  width = *reinterpret_cast<int*>(header+18);
+  height = *reinterpret_cast<int*>(header+22);
+
+  if (size == 0) {
+    unsigned span = 3*width;
+    span += (span%4 == 0) ? 0 : 4-span%4;
+    size = height*span;
+  }
+
+  in.seekg(offset,ios_base::beg);
+  data = new unsigned char[size];
+  in.read(reinterpret_cast<char*>(data),size);
+  if (!in) {
+    delete[] data;
+    throw runtime_error("failed to read bitmap data");
+  }
+
+  // cook data, bottom-up case
+  if (height > 0) {
+    stride = size/height;
+    for (int j=0; j < height; ++j) {
+      for (int i=0; i < width; ++i) {
+        int index = j*stride + 3*i;
+        unsigned char temp = data[index+R];
+        data[index+R] = data[index+B];
+        data[index+B] = temp;
+      }
+    }
+  }
+
+  // top-down case
+  else {
+    height = -height;
+    stride = size/height;
+    int half_height = height/2;
+    for (int j=0; j < half_height; ++j) {
+      for (int i=0; i < width; ++i) {
+        int index_src = (height-j-1)*stride + 3*i,
+            index_dst = j*stride + 3*i;
+        unsigned char temp[3] = { data[index_src+R],
+                                  data[index_src+G],
+                                  data[index_src+B] };
+        data[index_src+R] = data[index_dst+B];
+        data[index_src+G] = data[index_dst+G];
+        data[index_src+B] = data[index_dst+R];
+        data[index_dst+R] = temp[B];
+        data[index_dst+G] = temp[G];
+        data[index_dst+B] = temp[R];
+      }
+    }
+    if (height%2 == 1) {
+      for (int i=0; i < width; ++i) {
+        int index = half_height*stride + 3*i;
+        unsigned char temp = data[index+R];
+        data[index+R] = data[index+B];
+        data[index+B] = temp;
+      }
+    }
+  }
+
+}
+
+
+Texture::~Texture(void) {
+  delete[] data;
+}
+
+
+Vector Texture::uvToRGB(float u, float v) {
+  u -= floor(u);
+  v -= floor(v);
+  int x = int(width*u),
+      y = int(height*v),
+      index = y*stride + 3*x;
+  return Vector(data[index+R],data[index+G],data[index+B]);
+}
+
+
+
+
+================================================
+FILE: project/Texture.h
+================================================
+// Texture.h
+// -- bitmaps and texture coordinates (cs250 version)
+// cs250 11/16
+
+#ifndef CS250_TEXTURE_H
+#define CS250_TEXTURE_H
+
+
+#include "Affine.h"
+
+
+class Texture {
+  public:
+    explicit Texture(unsigned W=64, unsigned H=64);
+    Texture(const char *bitmap);
+    ~Texture(void);
+    Vector uvToRGB(float u, float v);
+  private:
+    enum { R=0, G=1, B=2 };
+    unsigned char *data;
+    int width, height, stride;
+    Texture& operator=(const Texture&);
+    Texture(const Texture&);
 };
 
 
@@ -3419,6 +4114,307 @@ int main(int /*argc*/, char * /*argv*/[]) {
 
 
 ================================================
+FILE: project/tests_and_demos/InterpolationTest.cpp
+================================================
+// InterpolationTest.cpp
+// -- test of clipping and interpolation of textures
+// cs250 11/17
+//
+// packages used:
+//   Affine, Camera, Projection, RasterUtilities, HalfSpace,
+//   Texture, Interpolate
+//
+// note:
+//   The bitmap image file 'texture.bmp' is used (if present)
+
+#include <iostream>
+#include <sstream>
+#include <algorithm>
+#include <vector>
+#include <cmath>
+#include <cstdlib>
+#include <SDL2/SDL.h>
+#include <GL/glew.h>
+#include <GL/gl.h>
+#include "Projection.h"
+#include "Interpolate.h"
+#include "Texture.h"
+#include "RasterUtilities.h"
+using namespace std;
+
+
+const float PI = 4.0f*atan(1.0f);
+const Point O(0,0,0);
+const Vector EX(1,0,0),
+             EY(0,1,0),
+             EZ(0,0,1);
+
+float frand(float a=0, float b=1) {
+  return a + (b-a)*float(rand()/float(RAND_MAX));
+}
+
+
+/////////////////////////////////////////////////////////////////
+// texture-compatible cube mesh
+/////////////////////////////////////////////////////////////////
+Point vertices[] = { Point( 1, 1, 1),  Point( 1, 1,-1),
+                     Point( 1,-1, 1),  Point( 1,-1,-1),
+                     Point(-1, 1, 1),  Point(-1, 1,-1),
+                     Point(-1,-1, 1),  Point(-1,-1,-1) };
+
+struct TexturedFace {
+  int index1, index2, index3;
+  float u1, v1, u2, v2, u3, v3;
+};
+
+TexturedFace faces[] = {
+  { 0,3,1, 0,1, 1,0, 1,1 }, { 0,2,3, 0,1, 0,0, 1,0 },
+  { 4,5,7, 1,1, 0,1, 0,0 }, { 4,7,6, 1,1, 0,0, 1,0 },
+  { 1,3,7, 0,1, 0,0, 1,0 }, { 1,7,5, 0,1, 1,0, 1,1 },
+  { 0,1,5, 1,0, 1,1, 0,1 }, { 0,5,4, 1,0, 0,1, 0,0 },
+  { 2,6,7, 1,1, 0,1, 0,0 }, { 2,7,3, 1,1, 0,0, 1,0 },
+  { 0,4,6, 1,1, 0,1, 0,0 }, { 0,6,2, 1,1, 0,0, 1,0 } };
+
+
+/////////////////////////////////////////////////////////////////
+class Client {
+  public:
+    Client(SDL_Window *w);
+    ~Client(void);
+    void draw(float dt);
+    void keypress(SDL_Keycode kc);
+  private:
+    SDL_Window *window;
+    Raster *raster;
+    Raster::byte *frame_buffer;
+    float *zbuffer;
+
+    Point cube1_center, cube2_center;
+    Vector cube1_axis, cube2_axis;
+    Hcoord cube1_rate, cube2_rate;
+
+    Camera camera;
+    Affine ndc_to_dev;
+    Matrix world_to_ndc;
+
+    TextureClip tclip;
+    vector<Affine> obj_to_world;
+    vector<Point> world_verts;
+    vector<TexturedCoord> clipped_verts;
+
+    Texture* texture[2];
+    float tex_scale[2];
+    bool intersect;
+    int mode;
+
+    float current_time,
+           translate_time;
+};
+
+
+Client::Client(SDL_Window *w)
+      : window(w) {
+  int width, height;
+  SDL_GetWindowSize(window,&width,&height);
+  frame_buffer = new Raster::byte[3*width*height];
+  zbuffer = new float[width*height];
+  raster = new Raster(frame_buffer,zbuffer,width,height,3*width);
+
+  cube1_axis = normalize(Vector(1,1,1));
+  cube2_axis = normalize(Vector(-0.5f,1,2));
+  cube1_rate = 2*PI*Hcoord(1/frand(10,20),1/frand(10,20),1/frand(10,20),1/frand(10,20));
+  cube2_rate = 2*PI*Hcoord(1/frand(10,20),1/frand(10,20),1/frand(10,20),1/frand(10,20));
+
+  float aspect = float(width)/float(height);
+  camera = Camera(O+10*EZ,-EZ,EY,0.4f*PI,aspect,1,30);
+  ndc_to_dev = translate(Vector(-0.5f,-0.5f,0))
+               * scale(0.5f*width,0.5f*height,1)
+               * translate(Vector(1,1,0));
+  world_to_ndc = CameraToNDC(camera) * WorldToCamera(camera);
+
+  tclip = TextureClip(Polyhedron(true));
+  texture[0] = new Texture(512,512);
+  texture[1] = texture[0];
+  try { texture[1] = new Texture("texture.bmp"); }
+  catch (exception &e) { cout << e.what() << endl; }
+  TexturedCoord::SetTexture(texture[0]);
+  tex_scale[0] = 1.0;
+  tex_scale[1] = 1.0;
+  intersect = false;
+  mode = 0;
+
+  current_time = 0;
+  translate_time = 0;
+}
+
+
+Client::~Client(void) {
+  if (texture[1] != texture[0])
+    delete texture[1];
+  delete texture[0];
+  delete raster;
+  delete[] zbuffer;
+  delete[] frame_buffer;
+}
+
+
+void Client::draw(float dt) {
+  raster->SetColor(230,230,230);
+  ClearBuffers(*raster,1);
+
+  Point cube_center[2];
+  cube_center[0] = O + 5*sin(cube1_rate.x*translate_time)*EX
+                     + 5*sin(cube1_rate.y*translate_time)*EY
+                     + 5*sin(cube1_rate.z*translate_time)*EZ;
+  obj_to_world.clear();
+  Affine Mo = translate(cube_center[0]-O)
+              * rotate(acos(cube1_axis.z),cross(EZ,cube1_axis))
+              * rotate(cube1_rate.w*current_time,EZ)
+              * scale(2);
+  obj_to_world.push_back(Mo);
+  cube_center[1] = O + 5*sin(cube2_rate.x*translate_time)*EX
+                     + 5*sin(cube2_rate.y*translate_time)*EY
+                     + 5*sin(cube2_rate.z*translate_time)*EZ;
+  Mo = translate(cube_center[1]-O)
+       * rotate(acos(cube2_axis.z),cross(EZ,cube2_axis))
+       * rotate(cube2_rate.w*current_time,EZ)
+       * scale(2.1f);
+  obj_to_world.push_back(Mo);
+
+  TextureClip cube_clip[2];
+  if (intersect) {
+    for (int n=0; n < 2; ++n) {
+      world_verts.clear();
+      for (int i=0; i < 8; ++i)
+        world_verts.push_back(obj_to_world[n] * vertices[i]);
+      Polyhedron poly;
+      for (int i=0; i < 12; ++i) {
+        const TexturedFace &f = faces[i];
+        const Point &P = world_verts[f.index1],
+                    &Q = world_verts[f.index2],
+                    &R = world_verts[f.index3];
+        poly.half_spaces.push_back(HalfSpace(P,Q,R,cube_center[n]));
+      }
+      cube_clip[n] = TextureClip(poly);
+    }
+  }
+
+  for (int n=0; n < 2; ++n) {
+    TexturedCoord::SetTexture(texture[n]);
+    world_verts.clear();
+    for (int i=0; i < 8; ++i)
+      world_verts.push_back(obj_to_world[n] * vertices[i]);
+  
+    for (int i=0; i < 12; ++i) {
+      const TexturedFace &f = faces[i];
+      const Point &Pworld = world_verts[f.index1],
+                  &Qworld = world_verts[f.index2],
+                  &Rworld = world_verts[f.index3];
+      TexturedCoord Ptex(Pworld,tex_scale[n]*f.u1,tex_scale[n]*f.v1),
+                    Qtex(Qworld,tex_scale[n]*f.u2,tex_scale[n]*f.v2),
+                    Rtex(Rworld,tex_scale[n]*f.u3,tex_scale[n]*f.v3);
+      clipped_verts.clear();
+      clipped_verts.push_back(Ptex);
+      clipped_verts.push_back(Qtex);
+      clipped_verts.push_back(Rtex);
+      if (cube_clip[(n+1)%2](clipped_verts)) {
+        for (unsigned j=0; j < clipped_verts.size(); ++j) {
+          const TexturedCoord &Pworldclipped = clipped_verts[j];
+          Hcoord Pndc = world_to_ndc * Pworldclipped;
+          clipped_verts[j] = TexturedCoord(Pndc,Pworldclipped.u,Pworldclipped.v);
+        }
+        if (tclip(clipped_verts)) {
+          Vector m = cross(Qworld-Pworld,Rworld-Pworld);
+          float mu = min(abs(dot(m,camera.Back()))/abs(m)+0.1f,1.0f);
+          TexturedCoord::SetColorScale(mu);
+          for (unsigned k=0; k < clipped_verts.size(); ++k) {
+            const TexturedCoord &Pndc = clipped_verts[k];
+            Hcoord Pdev = ndc_to_dev * Pndc;
+            clipped_verts[k] = TexturedCoord(Pdev,Pndc.u,Pndc.v);
+          }
+          for (unsigned k=2; k < clipped_verts.size(); ++k)
+            FillTriangle(*raster,clipped_verts[0],clipped_verts[k-1],clipped_verts[k]);
+        }
+      }
+    }
+  }
+
+  int width, height;
+  SDL_GetWindowSize(window,&width,&height);
+  glDrawPixels(width,height,GL_RGB,GL_UNSIGNED_BYTE,frame_buffer);
+
+  current_time += dt;
+  if (!intersect)
+    translate_time += dt;
+}
+
+
+void Client::keypress(SDL_Keycode kc) {
+  if (kc == SDLK_SPACE) {
+    mode = (mode + 1)%8;
+    tex_scale[0] = (mode%2 == 0) ? 1.0f : 4.0f;
+    tex_scale[1] = ((mode&0x2) == 0) ? 1.0f : 4.0f;
+    intersect = ((mode&0x4) != 0);
+    stringstream ss;
+    ss << "CS250 - Interpolation Demo [mode " << mode << "]";
+    SDL_SetWindowTitle(window,ss.str().c_str());
+  }
+}
+
+
+/////////////////////////////////////////////////////////////////
+//
+/////////////////////////////////////////////////////////////////
+
+int main(int /*argc*/, char * /*argv*/[]) {
+
+  // SDL: initialize and create a window
+  SDL_Init(SDL_INIT_VIDEO);
+  const char *title = "CS250 - Interpolation Demo [press spacebar]";
+  int width = 700,
+      height = 700;
+  SDL_Window *window = SDL_CreateWindow(title,SDL_WINDOWPOS_UNDEFINED,
+                                        SDL_WINDOWPOS_UNDEFINED,width,height,
+                                        SDL_WINDOW_OPENGL);
+  SDL_GLContext context = SDL_GL_CreateContext(window);
+
+  // animation loop
+  bool done = false;
+  Client *client = new Client(window);
+  Uint32 ticks_last = SDL_GetTicks();
+  while (!done) {
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+      switch (event.type) {
+        case SDL_QUIT:
+          done = true;
+          break;
+        case SDL_KEYDOWN:
+          if (event.key.keysym.sym == SDLK_ESCAPE)
+            done = true;
+          else
+            client->keypress(event.key.keysym.sym);
+          break;
+      }
+    }
+    Uint32 ticks = SDL_GetTicks();
+    float dt = 0.001f*(ticks - ticks_last);
+    ticks_last = ticks;
+    client->draw(dt);
+    SDL_GL_SwapWindow(window);
+  }
+
+  // clean up
+  delete client;
+  SDL_GL_DeleteContext(context);
+  SDL_Quit();
+  return 0;
+}
+
+
+
+
+================================================
 FILE: project/tests_and_demos/SimpleRenderTest.cpp
 ================================================
 // SimpleRenderTest.cpp
@@ -3585,6 +4581,82 @@ int main(int /*argc*/, char * /*argv*/[]) {
 
   SDL_GL_DeleteContext(context);
   SDL_Quit();
+  return 0;
+}
+
+
+
+
+================================================
+FILE: project/tests_and_demos/TextureClipTest.cpp
+================================================
+// TextureClipTest.cpp
+// -- simple test of TextureClip class.
+// cs250 4/17
+
+#include <iostream>
+#include <iomanip>
+#include "Interpolate.h"
+using namespace std;
+
+
+ostream& operator<<(ostream &s, const TexturedCoord &P) {
+  s << '(' << P.x << ',' << P.y << ',' << P.z << ',' << P.w
+    << ';' << P.u << ',' << P.v << ')';
+  return s;
+}
+
+
+int main(void) {
+  cout << boolalpha;
+    cout << setprecision(3);
+
+  { // clip a textured triangle against a single half-space
+    Hcoord P(-1,0,6,8),
+           Q(11,21,15,14),
+           R(-9,12,42,12);
+    TexturedCoord Ptex(P,-0.125f,0),
+                  Qtex(Q,0.786f,1.5f),
+                  Rtex(R,-0.75f,1);
+    Polyhedron poly;
+    poly.half_spaces.push_back(HalfSpace(24,-24,3,11));
+    TextureClip tclip(poly);
+    vector<TexturedCoord> verts;
+    verts.push_back(Ptex);
+    verts.push_back(Qtex);
+    verts.push_back(Rtex);
+    bool result = tclip(verts);
+    cout << result << " : ";
+    for (unsigned i=0; i < verts.size(); ++i)
+       cout << verts[i] << ' ';
+    cout << endl;
+  }
+
+  { // clip a textured triangle against the standard cube
+    Matrix Pi;
+    Pi.row[0] = Hcoord(4,0,0,0);
+    Pi.row[1] = Hcoord(0,8,0,0);
+    Pi.row[2] = Hcoord(0,0,-2,-3);
+    Pi.row[3] = Hcoord(0,0,-1,0);
+    Point Pcam(-0.5f,0.1f,-0.5f),
+          Qcam(0.5f,0.2f,-1.3f),
+          Rcam(0.2f,0.3f,-4);
+    TexturedCoord Ptex(Pi*Pcam,-1,0.2f),
+                  Qtex(Pi*Qcam,1,0.4f),
+                  Rtex(Pi*Rcam,0.4f,0.6f);
+    Polyhedron poly(true);
+    TextureClip tclip(poly);
+    vector<TexturedCoord> verts;
+    verts.push_back(Ptex);
+    verts.push_back(Qtex);
+    verts.push_back(Rtex);
+    bool result = tclip(verts);
+    cout << result << " : ";
+    for (unsigned i=0; i < verts.size(); ++i)
+       cout << verts[i] << ' ';
+    cout << endl;
+  }
+
   return 0;
 }
 

@@ -1,18 +1,10 @@
 Directory: cs250hw
-Files analyzed: 134
+Files analyzed: 135
 
-Estimated tokens: 949.3k
+Estimated tokens: 925.0k
 Directory structure:
 └── cs250hw/
     ├── split_ingest.py
-    ├── week5-source-1.txt
-    ├── week5-structure.txt
-    ├── week5-third_party-1.txt
-    ├── week5-third_party-2.txt
-    ├── week5-third_party-3.txt
-    ├── week5-third_party-4.txt
-    ├── week5-third_party-5.txt
-    ├── week5-third_party-6.txt
     └── project/
         ├── Affine.cpp
         ├── Affine.h
@@ -24,11 +16,14 @@ Directory structure:
         ├── CubeMesh.h
         ├── FrustumMesh.cpp
         ├── FrustumMesh.h
+        ├── HalfSpace.h
+        ├── Interpolate.h
         ├── main.cpp
         ├── Mesh.h
         ├── Projection.cpp
         ├── Projection.h
         ├── Raster.h
+        ├── RasterUtilities.cpp
         ├── RasterUtilities.h
         ├── Render.cpp
         ├── Render.h
@@ -36,6 +31,8 @@ Directory structure:
         ├── SimpleRender.h
         ├── SnubDodecMesh.cpp
         ├── SnubDodecMesh.h
+        ├── Texture.cpp
+        ├── Texture.h
         ├── tests_and_demos/
         │   ├── AffineDemo.cpp
         │   ├── AffineTest.cpp
@@ -43,7 +40,10 @@ Directory structure:
         │   ├── CameraRender2DTest.cpp
         │   ├── CubeRenderDemo.cpp
         │   ├── CubeTest.cpp
+        │   ├── InterpolationTest.cpp
         │   ├── SimpleRenderTest.cpp
+        │   ├── TextureClipTest.cpp
+        │   ├── TextureClipTest.txt
         │   ├── TriangleTest.cpp
         │   └── TriangleZTest.cpp
         ├── third_party/
@@ -139,13 +139,14 @@ Directory structure:
         │       ├── SDL_video.h
         │       └── SDL_vulkan.h
         └── visual_studio/
-            ├── CS200.filters
-            ├── CS200.sln
-            ├── CS200.vcxproj
-            ├── CS200/
+            ├── CS250.filters
+            ├── CS250.sln
+            ├── CS250.vcxproj
+            ├── Interpolate.cpp
+            ├── CS250/
             │   └── x64/
             │       └── Debug/
-            │           └── CS200.exe.recipe
+            │           └── CS250.exe.recipe
             └── x64/
                 └── Debug/
-                    └── CS200.exp
+                    └── CS250.exp

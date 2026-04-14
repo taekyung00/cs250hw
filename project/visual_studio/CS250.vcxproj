@@ -95,12 +95,13 @@
     <ClCompile Include="..\CameraRender2D.cpp" />
     <ClCompile Include="..\CubeMesh.cpp" />
     <ClCompile Include="..\FrustumMesh.cpp" />
+    <ClCompile Include="..\Interpolate.cpp" />
     <ClCompile Include="..\Projection.cpp" />
     <ClCompile Include="..\RasterUtilities.cpp" />
     <ClCompile Include="..\Render.cpp" />
     <ClCompile Include="..\SimpleRender.cpp" />
     <ClCompile Include="..\SnubDodecMesh.cpp" />
-    <ClCompile Include="..\tests_and_demos\TriangleTest.cpp" />
+    <ClCompile Include="..\tests_and_demos\InterpolationTest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Affine.h" />
@@ -108,6 +109,8 @@
     <ClInclude Include="..\CameraRender2D.h" />
     <ClInclude Include="..\CubeMesh.h" />
     <ClInclude Include="..\FrustumMesh.h" />
+    <ClInclude Include="..\HalfSpace.h" />
+    <ClInclude Include="..\Interpolate.h" />
     <ClInclude Include="..\Mesh.h" />
     <ClInclude Include="..\Projection.h" />
     <ClInclude Include="..\Raster.h" />
@@ -115,6 +118,15 @@
     <ClInclude Include="..\Render.h" />
     <ClInclude Include="..\SimpleRender.h" />
     <ClInclude Include="..\SnubDodecMesh.h" />
+    <ClInclude Include="..\Texture.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="..\..\..\HW Binaries\Debug\HalfSpace.lib" />
+    <Library Include="..\..\..\HW Binaries\Debug\Texture.lib" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\HW Binaries\Debug\HalfSpace.pdb" />
+    <None Include="..\..\..\HW Binaries\Debug\Texture.pdb" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

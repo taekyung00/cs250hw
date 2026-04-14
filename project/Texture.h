@@ -19,8 +19,8 @@ class Texture {
     enum { R=0, G=1, B=2 };
     unsigned char *data;
     int width, height, stride;
-    Texture& operator=(const Texture&);
-    Texture(const Texture&);
+    //Texture& operator=(const Texture&);
+    //Texture(const Texture&);
 };
 
 

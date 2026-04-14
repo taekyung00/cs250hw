@@ -1,23 +1,24 @@
 Directory: cs250hw
-Files analyzed: 6
+Files analyzed: 7
 
-Estimated tokens: 2.5k
+Estimated tokens: 2.7k
 
 Directory structure:
 └── cs250hw/
     └── project/
         ├── .gitignore
         └── visual_studio/
-            ├── CS200.filters
-            ├── CS200.sln
-            ├── CS200.vcxproj
-            ├── CS200/
+            ├── CS250.filters
+            ├── CS250.sln
+            ├── CS250.vcxproj
+            ├── Interpolate.cpp
+            ├── CS250/
             │   └── x64/
             │       └── Debug/
-            │           └── CS200.exe.recipe
+            │           └── CS250.exe.recipe
             └── x64/
                 └── Debug/
-                    └── CS200.exp
+                    └── CS250.exp
 
 
 ================================================
@@ -81,7 +82,7 @@ cloc-1.64.exe
 
 
 ================================================
-FILE: project/visual_studio/CS200.filters
+FILE: project/visual_studio/CS250.filters
 ================================================
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
@@ -94,14 +95,14 @@ FILE: project/visual_studio/CS200.filters
 
 
 ================================================
-FILE: project/visual_studio/CS200.sln
+FILE: project/visual_studio/CS250.sln
 ================================================
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27130.2020
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CS200", "CS200.vcxproj", "{7ABC44A1-16E8-48A2-A0C0-719102F4E2F9}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CS250", "CS250.vcxproj", "{7ABC44A1-16E8-48A2-A0C0-719102F4E2F9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -125,9 +126,9 @@ EndGlobal
 
 
 ================================================
-FILE: project/visual_studio/CS200.vcxproj
+FILE: project/visual_studio/CS250.vcxproj
 ================================================
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -142,7 +143,7 @@ FILE: project/visual_studio/CS200.vcxproj
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{7ABC44A1-16E8-48A2-A0C0-719102F4E2F9}</ProjectGuid>
-    <RootNamespace>CS200</RootNamespace>
+    <RootNamespace>CS250</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -225,10 +226,12 @@ FILE: project/visual_studio/CS200.vcxproj
     <ClCompile Include="..\CubeMesh.cpp" />
     <ClCompile Include="..\FrustumMesh.cpp" />
     <ClCompile Include="..\Projection.cpp" />
+    <ClCompile Include="..\RasterUtilities.cpp" />
     <ClCompile Include="..\Render.cpp" />
     <ClCompile Include="..\SimpleRender.cpp" />
     <ClCompile Include="..\SnubDodecMesh.cpp" />
-    <ClCompile Include="..\tests_and_demos\CubeRenderDemo.cpp" />
+    <ClCompile Include="..\tests_and_demos\InterpolationTest.cpp" />
+    <ClCompile Include="..\Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Affine.h" />
@@ -236,11 +239,27 @@ FILE: project/visual_studio/CS200.vcxproj
     <ClInclude Include="..\CameraRender2D.h" />
     <ClInclude Include="..\CubeMesh.h" />
     <ClInclude Include="..\FrustumMesh.h" />
+    <ClInclude Include="..\HalfSpace.h" />
+    <ClInclude Include="..\Interpolate.h" />
     <ClInclude Include="..\Mesh.h" />
     <ClInclude Include="..\Projection.h" />
+    <ClInclude Include="..\Raster.h" />
+    <ClInclude Include="..\RasterUtilities.h" />
     <ClInclude Include="..\Render.h" />
     <ClInclude Include="..\SimpleRender.h" />
     <ClInclude Include="..\SnubDodecMesh.h" />
+    <ClInclude Include="..\Texture.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="..\..\..\HW Binaries\Debug\HalfSpace.lib" />
+    <Library Include="..\..\..\HW Binaries\Debug\Interpolate.lib" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\HW Binaries\Debug\HalfSpace.pdb" />
+    <None Include="..\..\..\HW Binaries\Debug\Interpolate.pdb" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\texture.bmp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
@@ -249,13 +268,25 @@ FILE: project/visual_studio/CS200.vcxproj
 
 
 ================================================
-FILE: project/visual_studio/CS200/x64/Debug/CS200.exe.recipe
+FILE: project/visual_studio/Interpolate.cpp
+================================================
+#include "Interpolate.h"
+
+void FillTriangle(Raster& raster, const TexturedCoord& v0, const TexturedCoord& v1, const TexturedCoord& v2)
+{
+	
+}
+
+
+
+================================================
+FILE: project/visual_studio/CS250/x64/Debug/CS250.exe.recipe
 ================================================
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>C:\Users\taek0\Desktop\26spring\CS250\cs250hw\project\visual_studio\x64\Debug\CS200.exe</FullPath>
+      <FullPath>C:\Users\taek0\Desktop\26spring\CS250\cs250hw\project\visual_studio\x64\Debug\CS250.exe</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles />
@@ -265,7 +296,7 @@ FILE: project/visual_studio/CS200/x64/Debug/CS200.exe.recipe
 
 
 ================================================
-FILE: project/visual_studio/x64/Debug/CS200.exp
+FILE: project/visual_studio/x64/Debug/CS250.exp
 ================================================
 [Binary file]
 
