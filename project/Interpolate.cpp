@@ -1,6 +1,6 @@
 /******************************************************************************
  * File: Interpolate.cpp
- * Author: [본인 이름 입력]
+ * Author: [Taekyung Ho]
  * Course: CS250
  * Assignment: Texture Mapping and Clipping
  * Description: Implements perspective-correct texture mapping using screen-space
