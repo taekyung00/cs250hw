@@ -103,7 +103,6 @@
     <ClCompile Include="..\Render.cpp" />
     <ClCompile Include="..\SimpleRender.cpp" />
     <ClCompile Include="..\SnubDodecMesh.cpp" />
-    <ClCompile Include="..\tests_and_demos\InterpolationTest.cpp" />
     <ClCompile Include="..\tests_and_demos\week7\ClipTest.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -125,11 +124,9 @@
     <ClInclude Include="..\Texture.h" />
   </ItemGroup>
   <ItemGroup>
-    <Library Include="..\..\..\HW Binaries\Debug\HalfSpace.lib" />
     <Library Include="..\..\..\HW Binaries\Debug\Texture.lib" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\..\HW Binaries\Debug\HalfSpace.pdb" />
     <None Include="..\..\..\HW Binaries\Debug\Texture.pdb" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
