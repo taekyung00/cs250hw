@@ -93,8 +93,10 @@
     <ClCompile Include="..\Affine.cpp" />
     <ClCompile Include="..\Camera.cpp" />
     <ClCompile Include="..\CameraRender2D.cpp" />
+    <ClCompile Include="..\Clip.cpp" />
     <ClCompile Include="..\CubeMesh.cpp" />
     <ClCompile Include="..\FrustumMesh.cpp" />
+    <ClCompile Include="..\HalfSpace.cpp" />
     <ClCompile Include="..\Interpolate.cpp" />
     <ClCompile Include="..\Projection.cpp" />
     <ClCompile Include="..\RasterUtilities.cpp" />
@@ -102,11 +104,13 @@
     <ClCompile Include="..\SimpleRender.cpp" />
     <ClCompile Include="..\SnubDodecMesh.cpp" />
     <ClCompile Include="..\tests_and_demos\InterpolationTest.cpp" />
+    <ClCompile Include="..\tests_and_demos\week7\ClipTest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Affine.h" />
     <ClInclude Include="..\Camera.h" />
     <ClInclude Include="..\CameraRender2D.h" />
+    <ClInclude Include="..\Clip.h" />
     <ClInclude Include="..\CubeMesh.h" />
     <ClInclude Include="..\FrustumMesh.h" />
     <ClInclude Include="..\HalfSpace.h" />
