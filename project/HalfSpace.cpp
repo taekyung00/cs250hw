@@ -10,9 +10,9 @@
 #include "HalfSpace.h"
 #include <cmath>
 
-/**
- * Creates a half-space with outwardly pointing normal 'm' and boundary containing point 'C'.
- */
+ /**
+  * Creates a half-space with outwardly pointing normal 'm' and boundary containing point 'C'.
+  */
 HalfSpace::HalfSpace(const Vector& m, const Point& C) {
     x = m.x;
     y = m.y;
@@ -26,7 +26,7 @@ HalfSpace::HalfSpace(const Vector& m, const Point& C) {
 HalfSpace::HalfSpace(const Point& A, const Point& B, const Point& C, const Point& P) {
     Vector v1 = B - A;
     Vector v2 = C - A;
-    
+
     // Normal calculation via cross product
     Vector n;
     n.x = v1.y * v2.z - v1.z * v2.y;
@@ -53,12 +53,12 @@ HalfSpace::HalfSpace(const Point& A, const Point& B, const Point& C, const Point
 Polyhedron::Polyhedron(bool cube) {
     if (cube) {
         // Standard cube decomposition order to match expected test output
-        half_spaces.push_back(HalfSpace( 1,  0,  0, -1)); // Right
-        half_spaces.push_back(HalfSpace(-1,  0,  0, -1)); // Left
-        half_spaces.push_back(HalfSpace( 0,  1,  0, -1)); // Top
-        half_spaces.push_back(HalfSpace( 0, -1,  0, -1)); // Bottom
-        half_spaces.push_back(HalfSpace( 0,  0,  1, -1)); // Front
-        half_spaces.push_back(HalfSpace( 0,  0, -1, -1)); // Back
+        half_spaces.push_back(HalfSpace(1, 0, 0, -1)); // Right
+        half_spaces.push_back(HalfSpace(-1, 0, 0, -1)); // Left
+        half_spaces.push_back(HalfSpace(0, 1, 0, -1)); // Top
+        half_spaces.push_back(HalfSpace(0, -1, 0, -1)); // Bottom
+        half_spaces.push_back(HalfSpace(0, 0, 1, -1)); // Front
+        half_spaces.push_back(HalfSpace(0, 0, -1, -1)); // Back
     }
 }
 
@@ -67,14 +67,14 @@ Polyhedron::Polyhedron(bool cube) {
  */
 Polyhedron::Polyhedron(float fov, float a, float N, float F) {
     float W = std::tan(fov / 2.0f);
-    
+
     // Frustum plane order adjusted for correct vertex sequence in clipping
-    half_spaces.push_back(HalfSpace( 1,  0, a * W, 0));   // Right
-    half_spaces.push_back(HalfSpace(-1,  0, a * W, 0));   // Left
-    half_spaces.push_back(HalfSpace( 0,  1, W, 0));       // Top
-    half_spaces.push_back(HalfSpace( 0, -1, W, 0));       // Bottom
-    half_spaces.push_back(HalfSpace( 0,  0,  1,  N));     // Near
-    half_spaces.push_back(HalfSpace( 0,  0, -1, -F));     // Far
+    half_spaces.push_back(HalfSpace(1, 0, a * W, 0));   // Right
+    half_spaces.push_back(HalfSpace(-1, 0, a * W, 0));   // Left
+    half_spaces.push_back(HalfSpace(0, 1, W, 0));       // Top
+    half_spaces.push_back(HalfSpace(0, -1, W, 0));       // Bottom
+    half_spaces.push_back(HalfSpace(0, 0, 1, N));     // Near
+    half_spaces.push_back(HalfSpace(0, 0, -1, -F));     // Far
 }
 
 /**
